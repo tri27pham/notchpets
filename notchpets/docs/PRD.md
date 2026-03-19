@@ -1,5 +1,5 @@
 # notchpets — Product Requirements Document
-**v2.0 — March 2026**
+**v2.1 — March 2026**
 
 ---
 
@@ -56,12 +56,12 @@ notchpets is designed for exactly two users linked as a pair. There is no solo m
 | | |
 |---|---|
 | **App framework** | SwiftUI + AppKit (NSPanel for the notch window) |
-| **Pet rendering** | SpriteKit via `SpriteView` — pixel art spritesheet animation |
+| **Pet rendering** | SwiftUI `Image` — static pixel art image per species (v1). SpriteKit spritesheet animation added in v2. |
 | **Backend** | Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) |
 | **Supabase client** | supabase-swift SDK — Auth, PostgREST, Realtime channels |
 | **Real-time sync** | Supabase Realtime — WebSocket channels keyed on pair ID |
 | **Now-playing detection** | macOS MediaRemote private framework via `@_silgen_name` — integrated directly, no helper binary |
-| **Asset pipeline** | Pixel art spritesheets sourced from itch.io (CC0 / licensed packs) |
+| **Asset pipeline** | Static pixel art images per species (v1). Spritesheets for animation added in v2. |
 | **Session storage** | macOS Keychain via Security framework |
 | **Auto-updates** | Sparkle framework |
 | **Distribution** | Direct download .dmg, signed with Developer ID |
@@ -109,7 +109,13 @@ Each user owns one pet. Both pets are visible in the shared panel — your pet o
 - Penguin
 - Rabbit
 
-Each species has a full pixel art spritesheet with the following animation states:
+**v1 — Static image per species**
+
+Each species has a single static pixel art image displayed in the panel. No animation in v1.
+
+**v2 — Full spritesheet animation (deferred)**
+
+Each species will have a full pixel art spritesheet with the following animation states:
 
 - **idle** — breathing loop, ~2s cycle
 - **happy** — bouncing, triggered by interaction
@@ -129,8 +135,8 @@ Each species has a full pixel art spritesheet with the following animation state
 |---|---|
 | **Hunger** | 0–100. Starts at 100. Decays 5 points per 30 minutes via cron. |
 | **Happiness** | 0–100. Starts at 100. Decays 3 points per 30 minutes via cron. |
-| **Feed action** | +30 hunger (capped at 100). Triggers eating animation on both screens. |
-| **Play action** | +25 happiness (capped at 100). Triggers playing animation on both screens. |
+| **Feed action** | +30 hunger (capped at 100). Triggers eating animation on both screens (v2). |
+| **Play action** | +25 happiness (capped at 100). Triggers playing animation on both screens (v2). |
 | **Notification** | Local push notification when either pet reaches hunger or happiness < 20. |
 | **Cross-interaction** | Either user can feed or play with either pet. |
 
@@ -151,9 +157,9 @@ Each user independently selects a pixel art background scene for their pet. The 
 
 Backgrounds are static pixel art scenes at 200×160px. No parallax or animation in v1. User selects via a scene picker in the settings panel.
 
-### 6.5 Ball-catching mini-game
+### 6.5 Ball-catching mini-game *(v2 — deferred)*
 
-Either user can throw a ball to either pet. The pet runs across the panel to catch it, jumps, grabs the ball, lands, then returns to idle. The ball is a separate sprite that travels across the screen as the pet moves toward it.
+Either user can throw a ball to either pet. The pet runs across the panel to catch it, jumps, grabs the ball, lands, then returns to idle. Requires spritesheet animations — deferred to v2.
 
 | | |
 |---|---|
@@ -193,7 +199,7 @@ MediaRemote is integrated directly into the Swift app via `@_silgen_name` functi
 | **Display** | Small pixel art bubble above the pet: music note icon + track name + artist (truncated to 24 chars) |
 | **Sync** | Track info written to pets table on change, broadcast via Realtime to partner's screen |
 | **No playback** | Bubble hidden when nothing is playing or machine is paused |
-| **Pet reaction** | Pet does a small dance frame when track changes (single cycle, returns to idle) |
+| **Pet reaction** | Pet does a small dance animation when track changes (v2 — requires spritesheet). |
 | **App Store** | Not compatible — private API. Irrelevant for v1 direct .dmg distribution. |
 
 ---
@@ -306,12 +312,20 @@ Accessible via a gear icon in the expanded notch panel. Settings are personal �
 
 Recommended implementation sequence for a vibe-coded build with heavy Claude Code usage:
 
+**v1 — Core experience (no animations)**
+
 - **Day 1** — Swift/SwiftUI app shell. NSPanel notch window with true notch surround. `NSScreen` APIs for exact notch dimensions. Hover expand/collapse via `NSTrackingArea`. Static pixel art panel renders correctly.
 - **Day 2** — Supabase schema, supabase-swift Auth magic link, invite/pairing flow, Keychain session storage.
-- **Day 3** — SpriteKit pet rendering, spritesheet animation state machine, background scenes, Realtime subscriptions wired up.
+- **Day 3** — Static pet images and backgrounds. Setup wizard. Realtime subscriptions wired up.
 - **Day 4** — Feed/play interactions, message bubbles, speech bubble UI, free text input.
-- **Day 5** — MediaRemote now-playing integration (native Swift, no helper binary), music bubble UI, Realtime sync of track data, pet dance reaction on track change.
+- **Day 5** — MediaRemote now-playing integration (native Swift, no helper binary), music bubble UI, Realtime sync of track data.
 - **Buffer** — Pet decay cron, local notifications via `UNUserNotificationCenter`, Sparkle auto-updates, polish, .dmg packaging.
+
+**v2 — Animations (deferred)**
+
+- SpriteKit pet rendering, spritesheet animation state machine.
+- Animation triggers wired to feed, play, message, and now-playing events.
+- Ball-catching mini-game.
 
 ---
 
