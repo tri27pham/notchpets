@@ -3,6 +3,7 @@ import SwiftUI
 struct PanelView: View {
     @ObservedObject var state: PanelState
     let metrics: NotchMetrics
+    @StateObject private var petStore = PetStore()
 
     private let openAnimation  = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
     private let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
@@ -44,10 +45,16 @@ struct PanelView: View {
 
             if state.isExpanded {
                 HStack(spacing: 10) {
-                    PetSlotView(background: "japan_background")
-                        .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
-                    PetSlotView(background: "bedroom_background")
-                        .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+                    PetSlotView(
+                        background: petStore.myPet?.background ?? "japan_background",
+                        species: petStore.myPet?.species ?? "penguin"
+                    )
+                    .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+                    PetSlotView(
+                        background: petStore.partnerPet?.background ?? "bedroom_background",
+                        species: petStore.partnerPet?.species ?? "penguin"
+                    )
+                    .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
                 }
                 .padding(.top, 20)
                 .padding(.bottom, 30)
