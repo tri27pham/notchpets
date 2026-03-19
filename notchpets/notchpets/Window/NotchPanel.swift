@@ -23,7 +23,8 @@ final class NotchPanel: NSPanel {
         hasShadow = false
         isMovable = false
         isReleasedWhenClosed = false
-        ignoresMouseEvents = false
+        ignoresMouseEvents = true
+        acceptsMouseMovedEvents = true
 
         // Same level as boring.notch (CGWindowLevelForKey(.mainMenuWindow) + 3)
         level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 3)

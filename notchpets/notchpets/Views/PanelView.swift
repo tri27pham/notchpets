@@ -7,8 +7,6 @@ struct PanelView: View {
     private let openAnimation  = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
     private let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
 
-    @State private var hoverTask: Task<Void, Never>?
-
     // MARK: – Corner radii (animate with the shape)
 
     private var topCornerRadius: CGFloat {
@@ -34,8 +32,6 @@ struct PanelView: View {
                 state.isExpanded ? openAnimation : closeAnimation,
                 value: state.isExpanded
             )
-            .contentShape(Rectangle())
-            .onHover(perform: handleHover)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
@@ -82,25 +78,4 @@ struct PanelView: View {
         )
     }
 
-    // MARK: – Hover handling
-
-    private func handleHover(_ hovering: Bool) {
-        hoverTask?.cancel()
-        hoverTask = nil
-
-        if hovering {
-            // Small delay prevents accidental expansion while passing through the area.
-            hoverTask = Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(100))
-                guard !Task.isCancelled else { return }
-                state.isExpanded = true
-            }
-        } else {
-            hoverTask = Task { @MainActor in
-                try? await Task.sleep(for: .seconds(Constants.COLLAPSE_DEBOUNCE_SECONDS))
-                guard !Task.isCancelled else { return }
-                state.isExpanded = false
-            }
-        }
-    }
 }
