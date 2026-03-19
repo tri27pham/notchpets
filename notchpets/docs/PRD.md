@@ -312,20 +312,14 @@ Accessible via a gear icon in the expanded notch panel. Settings are personal �
 
 Recommended implementation sequence for a vibe-coded build with heavy Claude Code usage:
 
-**v1 — Core experience (no animations)**
-
-- **Day 1** — Swift/SwiftUI app shell. NSPanel notch window with true notch surround. `NSScreen` APIs for exact notch dimensions. Hover expand/collapse via `NSTrackingArea`. Static pixel art panel renders correctly.
-- **Day 2** — Supabase schema, supabase-swift Auth magic link, invite/pairing flow, Keychain session storage.
-- **Day 3** — Static pet images and backgrounds. Setup wizard. Realtime subscriptions wired up.
-- **Day 4** — Feed/play interactions, message bubbles, speech bubble UI, free text input.
-- **Day 5** — MediaRemote now-playing integration (native Swift, no helper binary), music bubble UI, Realtime sync of track data.
-- **Buffer** — Pet decay cron, local notifications via `UNUserNotificationCenter`, Sparkle auto-updates, polish, .dmg packaging.
-
-**v2 — Animations (deferred)**
-
-- SpriteKit pet rendering, spritesheet animation state machine.
-- Animation triggers wired to feed, play, message, and now-playing events.
-- Ball-catching mini-game.
+- **Stage 1** — Swift/SwiftUI app shell. NSPanel notch window. Hover expand/collapse. Static panel renders correctly. ✓
+- **Stage 2** — Pet data model (UserDefaults). Static pet image + background in panel. ✓
+- **Stage 3** — SpriteKit animations for one species (penguin). Animation state machine proven.
+- **Stage 4** — All 6 species animated. All 8 backgrounds added. Setup wizard for species/name/background selection.
+- **Stage 5** — Local messaging. Speech bubble appears above own pet on own screen only.
+- **Stage 6** — Spotify / now-playing detection via MediaRemote. Music bubble on own screen only.
+- **Stage 7** — Supabase backend, auth, pairing. All local state (pets, messages, now-playing) wired to real-time sync.
+- **Stage 8** — Local notifications, settings panel, .dmg packaging, Sparkle auto-updates.
 
 ---
 

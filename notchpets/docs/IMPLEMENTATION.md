@@ -242,33 +242,340 @@ Swift 5.9. No SpriteKit. No additional packages.
 
 ---
 
-## Stage 3 — Supabase backend & auth
-*Schema, auth, invite-based pairing, and pet data migration to the cloud*
+## Stage 3 — Animations for one pet (penguin)
+*SpriteKit for a single species — no backend, no setup wizard*
 
 ### Goal
 
-Supabase schema is fully migrated. Magic link auth works. A user can generate an invite code and a second user can enter it to form a pair. Session is stored in the macOS Keychain and persists across restarts. PetStore and the setup wizard are wired to Supabase so pet data syncs between paired users via Realtime.
+Replace the static penguin image with a SpriteKit animated sprite. All other species remain as static images. No Supabase, no setup wizard — the penguin spritesheet is hardcoded. This stage proves the animation pipeline works before scaling to all species.
+
+### Files created this stage
+
+```
+notchpets/
+  Pet/
+    AnimationState.swift     # AnimationState enum + AnimationDef struct + penguinManifest
+    PetSpriteNode.swift      # SKSpriteNode: loads penguin atlas, slices frames, runs states
+    PetScene.swift           # SKScene: background image + PetSpriteNode, trigger API
+  Views/
+    PetSlotView.swift        # Updated: SpriteView when species == "penguin", Image otherwise
+  Assets.xcassets/
+    penguin.spriteatlas/     # Spritesheet PNG (192×352px, 11 rows × 6 cols, 32×32 frames)
+```
+
+### Spritesheet spec
+
+Single PNG, 11 rows × 6 frames, 32×32px per frame, transparent background. Row order: idle (4f), happy (6f), eating (6f), playing (6f), sleeping (4f), sad (4f), dancing (6f), run (6f), jump (4f), catch (4f), land (4f). Unused cells in shorter rows left transparent.
+
+### Acceptance criteria
+
+- [ ] Penguin renders via SpriteKit with idle animation looping
+- [ ] All 11 animation states play correctly when triggered
+- [ ] Non-looping states (happy, eating, etc.) return to idle on completion
+- [ ] Static image fallback still renders for all other species
+- [ ] No regression to Stage 2 panel layout or expand/collapse behaviour
+
+### Claude Code prompt
+
+```
+Build Stage 3 of notchpets: SpriteKit animation for the penguin only.
+
+Stages 1 and 2 are complete. PetStore and Models exist. The penguin spritesheet PNG
+is in Assets.xcassets/penguin.spriteatlas. It is 192×352px: 11 rows × 6 cols, 32×32px
+frames, transparent background.
+
+Row order (0-indexed):
+0: idle (4f), 1: happy (6f), 2: eating (6f), 3: playing (6f), 4: sleeping (4f),
+5: sad (4f), 6: dancing (6f), 7: run (6f), 8: jump (4f), 9: catch (4f), 10: land (4f)
+
+Create notchpets/Pet/AnimationState.swift:
+- Enum AnimationState: String, CaseIterable
+  cases: idle, happy, eating, playing, sleeping, sad, dancing, run, jump, catch_ball, land
+- Struct AnimationDef: row (Int, 0-indexed), frameCount (Int), fps (Int), loops (Bool)
+- Let penguinManifest: [AnimationState: AnimationDef] hardcoded per above row order
+
+Create notchpets/Pet/PetSpriteNode.swift:
+- Class PetSpriteNode: SKSpriteNode
+- init(): loads SKTextureAtlas(named: "penguin"), slices frames using SKTexture(rect:in:)
+  frameW = 1/6, frameH = 1/11, UV origin bottom-left (rowFromBottom = 10 - row)
+- Set filteringMode = .nearest on all textures
+- func setState(_ state: AnimationState, onComplete: (() -> Void)? = nil):
+  builds SKAction.animate(with:timePerFrame:); loops: repeatForever; one-shot: run then onComplete
+
+Create notchpets/Pet/PetScene.swift:
+- Class PetScene: SKScene, init(size:background:)
+- didMove(to:): fills scene with Image(background) node, adds PetSpriteNode centred, scale 3, starts idle
+- func trigger(_ state: AnimationState): one-shot states return to idle via onComplete;
+  looping states (sleeping, sad) set directly
+
+Update notchpets/Views/PetSlotView.swift:
+- Props: background: String, species: String
+- If species == "penguin": show SpriteView(scene: PetScene(size:background:)) fixed at slot size
+- Otherwise: show existing ZStack Image layout (background + static species image)
+- Hold PetScene in a @StateObject wrapper so it is not recreated on re-render
+
+Swift 5.9. SpriteKit only, no additional packages.
+```
+
+---
+
+## Stage 4 — All species, all backgrounds & setup wizard
+*Complete the asset set and add species/background selection*
+
+### Goal
+
+All 6 species have spritesheet animations. All 8 background scenes are added. A setup wizard lets the user choose their species, name their pet, and pick a background. Data is saved to UserDefaults. The panel renders the chosen combination.
+
+### Files created this stage
+
+```
+notchpets/
+  Setup/
+    SetupWizard.swift        # 3-step wizard: species picker, name, background picker
+    SpeciesPicker.swift      # Grid of all 6 species (idle frame preview or static image)
+    BackgroundPicker.swift   # Grid of all 8 background thumbnails
+  Assets.xcassets/
+    cat.spriteatlas/         # Spritesheet per remaining species
+    dog.spriteatlas/
+    frog.spriteatlas/
+    panda.spriteatlas/
+    rabbit.spriteatlas/
+    + 6 remaining background Image Sets
+```
+
+### Acceptance criteria
+
+- [ ] Setup wizard appears on first launch (no pet in UserDefaults)
+- [ ] Species picker shows all 6 species
+- [ ] Background picker shows all 8 backgrounds
+- [ ] Completing wizard saves pet and renders it in the panel with the correct animation
+- [ ] All 6 species animate correctly with the same state machine
+- [ ] All 8 backgrounds render correctly behind the pet
+
+### Claude Code prompt
+
+```
+Build Stage 4 of notchpets: all species animations, all backgrounds, and setup wizard.
+
+Stage 3 is complete. PetSpriteNode, PetScene, AnimationState, and penguinManifest exist.
+All 6 species spritesheets are in Assets.xcassets as .spriteatlas folders named:
+  cat, dog, frog, panda, penguin, rabbit
+All 8 backgrounds are Image Sets named:
+  bedroom, rainy_window, forest, mount_fuji, cafe, beach, library, snowy_field, japan_background
+
+Create notchpets/Pet/SpriteManifest.swift:
+- Let speciesManifest: [String: [AnimationState: AnimationDef]]
+- All 6 species share the same row/frame layout as penguinManifest
+- Remove the hardcoded penguinManifest from AnimationState.swift and replace with speciesManifest
+
+Update notchpets/Pet/PetSpriteNode.swift:
+- init(species: String): load SKTextureAtlas(named: species) instead of hardcoded "penguin"
+- Use speciesManifest[species] for frame definitions
+
+Update notchpets/Pet/PetScene.swift:
+- init(size:species:background:): pass species through to PetSpriteNode
+
+Update notchpets/Views/PetSlotView.swift:
+- Remove the species == "penguin" branch — always use SpriteView now
+
+Create notchpets/Setup/SpeciesPicker.swift:
+- SwiftUI View, @Binding selection: String?
+- LazyVGrid of 6 species cards using Image(species) (static fallback) scaled to 64x64
+- White border on selected
+
+Create notchpets/Setup/BackgroundPicker.swift:
+- SwiftUI View, @Binding selection: String?
+- LazyVGrid of 8 background thumbnails using Image(background) scaled to 80x60
+- White border on selected
+
+Create notchpets/Setup/SetupWizard.swift:
+- 3 steps: SpeciesPicker → name TextField (12 char max) → BackgroundPicker
+- On complete: create Pet, call PetStore.save(_:), navigate to panel
+
+Update notchpets/Views/PanelView.swift:
+- If petStore.myPet == nil: show SetupWizard
+- Otherwise: render PetSlotViews with real species and background from PetStore
+
+Swift 5.9. No additional packages.
+```
+
+---
+
+## Stage 5 — Local messaging
+*Speech bubbles on your own screen — no backend*
+
+### Goal
+
+The user can type a message that appears as a speech bubble above their own pet on their own screen. No Supabase — the bubble is local state only. This proves the UI works before wiring it to real-time sync in Stage 7.
+
+### Files created this stage
+
+```
+notchpets/
+  Messaging/
+    MessageBubble.swift      # Pixel art speech bubble overlay
+    MessageInput.swift       # Text input + send button
+    LocalMessageStore.swift  # @MainActor ObservableObject: current message + fade timer
+```
+
+### Message logic
+
+| | |
+|---|---|
+| **Input** | Chat icon button below the user's own pet slot. Tap to show/hide TextField. |
+| **Send** | Sets message in LocalMessageStore, starts 60-second fade timer. |
+| **Display** | Bubble appears above pet immediately. Fades out after 60 seconds. Sending a new message resets the timer. |
+| **Scope** | Local only — partner does not see it yet. Sync added in Stage 7. |
+
+### Acceptance criteria
+
+- [ ] Chat button appears below the left (own) pet slot
+- [ ] Typing and sending a message shows a bubble above the pet
+- [ ] Bubble fades out after 60 seconds
+- [ ] Sending a new message replaces the current bubble and resets the timer
+- [ ] No message bubble shown on the right (partner) slot
+
+### Claude Code prompt
+
+```
+Build Stage 5 of notchpets: local messaging — speech bubble on own screen only.
+
+Stages 1–4 are complete. No Supabase in this stage — message is local state only.
+
+Create notchpets/Messaging/LocalMessageStore.swift:
+- @MainActor final class LocalMessageStore: ObservableObject
+- @Published var message: String? = nil
+- @Published var bubbleVisible: Bool = false
+- private var fadeTimer: Timer?
+- func send(_ text: String):
+  - Set message = text, bubbleVisible = true
+  - Cancel existing timer, start new 60-second Timer
+  - On timer fire: set bubbleVisible = false
+
+Create notchpets/Messaging/MessageBubble.swift:
+- SwiftUI View, props: message: String?, visible: Bool
+- Rounded rectangle bubble with a small downward triangle pointer
+- System monospaced font 8pt, white text on Color(hex: "#1a1a2e") background
+- Max width 160px, clipped at 48 chars
+- .opacity(visible ? 1 : 0).animation(.easeOut(duration: 0.4), value: visible)
+
+Create notchpets/Messaging/MessageInput.swift:
+- SwiftUI View, @ObservedObject store: LocalMessageStore
+- Chat icon (💬) button; tap toggles @State var inputVisible: Bool
+- When visible: TextField (max 48 chars) + send button
+- On send: call store.send(_:), set inputVisible = false
+
+Update notchpets/Views/PanelView.swift:
+- Add @StateObject var messageStore = LocalMessageStore()
+- Overlay MessageBubble above the left PetSlotView, bound to messageStore
+- Place MessageInput below the left PetSlotView
+
+Swift 5.9, @MainActor where needed. No additional packages.
+```
+
+---
+
+## Stage 6 — Spotify / now-playing detection
+*MediaRemote local integration — music bubble on your screen only*
+
+### Goal
+
+The app reads now-playing info from the macOS MediaRemote framework and shows a music bubble above the user's own pet. Local only — no Supabase. This proves MediaRemote works before wiring it to real-time sync in Stage 7.
+
+### Files created this stage
+
+```
+notchpets/
+  NowPlaying/
+    NowPlayingService.swift  # MediaRemote @_silgen_name declarations + change handler
+    MusicBubble.swift        # Small music info bubble
+```
+
+### MediaRemote integration details
+
+| | |
+|---|---|
+| **Framework** | MediaRemote — private, declared via `@_silgen_name` in Swift |
+| **Trigger** | `MRMediaRemoteRegisterNowPlayingInfoDidChangeHandler` — event-driven, no polling |
+| **Query** | `MRMediaRemoteGetNowPlayingInfo` — called inside the change handler |
+| **Keys** | `kMRMediaRemoteNowPlayingInfoTitle`, `kMRMediaRemoteNowPlayingInfoArtist`, `kMRMediaRemoteNowPlayingInfoPlaybackRate` |
+| **Scope** | Local only — partner does not see it yet. Sync added in Stage 7. |
+
+### Acceptance criteria
+
+- [ ] App receives track change events when music starts, stops, or changes
+- [ ] Track name and artist appear in the music bubble above the user's own pet
+- [ ] Music bubble is hidden when nothing is playing
+- [ ] Works with Spotify, Apple Music, and browser audio
+- [ ] No polling — CPU usage negligible when music is not changing
+
+### Claude Code prompt
+
+```
+Build Stage 6 of notchpets: local MediaRemote now-playing detection.
+
+Stages 1–5 are complete. No Supabase in this stage — track info is local only.
+
+Create notchpets/NowPlaying/NowPlayingService.swift:
+- @_silgen_name declarations:
+  func MRMediaRemoteRegisterNowPlayingInfoDidChangeHandler(_ queue: DispatchQueue, _ handler: @escaping () -> Void)
+  func MRMediaRemoteGetNowPlayingInfo(_ queue: DispatchQueue, _ handler: @escaping ([String: Any]?) -> Void)
+- String key constants:
+  let kMRMediaRemoteNowPlayingInfoTitle = "kMRMediaRemoteNowPlayingInfoTitle"
+  let kMRMediaRemoteNowPlayingInfoArtist = "kMRMediaRemoteNowPlayingInfoArtist"
+  let kMRMediaRemoteNowPlayingInfoPlaybackRate = "kMRMediaRemoteNowPlayingInfoPlaybackRate"
+- Struct TrackInfo: title: String, artist: String
+- @MainActor final class NowPlayingService: ObservableObject
+- @Published var currentTrack: TrackInfo? = nil
+- func start():
+  - Register change handler on DispatchQueue.main
+  - In handler: call MRMediaRemoteGetNowPlayingInfo on DispatchQueue.main
+  - Extract title, artist, playbackRate from info dict
+  - If playbackRate > 0 and title non-empty: set currentTrack = TrackInfo(title:artist:)
+  - Otherwise: set currentTrack = nil
+
+Create notchpets/NowPlaying/MusicBubble.swift:
+- SwiftUI View, props: track: TrackInfo?
+- Small bubble: "♪ title · artist" truncated to 24 chars
+- System monospaced font 7pt, white on dark background
+- .opacity(track != nil ? 1 : 0).animation(.easeOut(duration: 0.3), value: track != nil)
+
+Update notchpets/Views/PanelView.swift:
+- Add @StateObject var nowPlayingService = NowPlayingService()
+- Call nowPlayingService.start() in .onAppear
+- Overlay MusicBubble above MessageBubble on the left (own) pet slot
+
+Swift 5.9. No additional packages. No child process.
+```
+
+---
+
+## Stage 7 — Supabase backend & real-time sync
+*Auth, pairing, and live sync of pets, messages, and now-playing*
+
+### Goal
+
+Supabase schema is migrated. Magic link auth works. Users pair via invite code. All local state (pet data, messages, now-playing) is wired to Supabase and broadcast to the partner in real time. PetStore, LocalMessageStore, and NowPlayingService are all updated to write to and read from Supabase.
 
 ### Files created this stage
 
 ```
 supabase/
   migrations/
-    001_schema.sql            # All tables: pairs, invites, pets
+    001_schema.sql            # pairs, invites, pets tables
   functions/
-    pet-decay/index.ts        # Cron: hunger/happiness decay
-    invite-cleanup/index.ts   # Cron: expired invite deletion
+    pet-decay/index.ts        # Cron: hunger/happiness decay every 30 min
+    invite-cleanup/index.ts   # Cron: expired invite deletion every hour
 notchpets/
   Data/
-    SupabaseManager.swift     # Singleton SupabaseClient, reads Config.plist for URL + key
-    PetRepository.swift       # Supabase queries: fetch pets, insert pet
-    PetStore.swift            # Updated: adds partnerPet, Realtime subscription, replaces UserDefaults
+    SupabaseManager.swift     # Singleton SupabaseClient
+    PetRepository.swift       # Supabase queries: fetch, insert, update pets
   Storage/
-    KeychainService.swift     # Save/load/delete session token from Keychain
+    KeychainService.swift     # Save/load/delete tokens from Keychain
   Auth/
-    AuthManager.swift         # @MainActor ObservableObject: session state, sign-in, sign-out
-    AuthGate.swift            # SwiftUI view: routes to LoginView, PairView, or PanelView
-    LoginView.swift           # Email input + send magic link
+    AuthManager.swift         # Session state, magic link sign-in, sign-out
+    AuthGate.swift            # Routes to LoginView, SetupWizard, PairView, or PanelView
+    LoginView.swift           # Email + magic link send
     PairView.swift            # Generate or enter invite code
 ```
 
@@ -307,331 +614,106 @@ current_track_artist text
 updated_at timestamptz default now()
 ```
 
+### What gets wired up in this stage
+
+| | |
+|---|---|
+| **Pet data** | PetStore replaces UserDefaults with Supabase. partnerPet populated via Realtime. |
+| **Messages** | LocalMessageStore writes `current_message` to Supabase. Partner sees it via Realtime. |
+| **Now-playing** | NowPlayingService writes track info to Supabase. Partner's music bubble updates via Realtime. |
+| **Feed / play** | Hunger/happiness mutations write to Supabase and sync to partner via Realtime. |
+
 ### Acceptance criteria
 
-- [ ] `supabase db push` runs without errors
-- [ ] Magic link email is sent and clicking it opens the app and establishes a session
-- [ ] Session token is saved to Keychain and survives app restart
-- [ ] User A can generate a 6-character invite code displayed in large pixel art text
-- [ ] User B can enter the code and a pairs row is created linking both users
-- [ ] `pair_id` is stored in Keychain / UserDefaults on both machines after pairing
-- [ ] Expired invites (>24h) are not accepted
-- [ ] pet-decay Edge Function deploys and decrements hunger/happiness on schedule
-- [ ] All tables have RLS enabled
-- [ ] Setup wizard writes a pets row to Supabase (replaces UserDefaults persistence)
-- [ ] Both pets render in the panel with correct backgrounds (own + partner)
-- [ ] Partner pet updates arrive via Realtime
+- [ ] Magic link email sent and clicking it establishes a session
+- [ ] Session persists across app restarts via Keychain
+- [ ] User A generates invite code, User B enters it — pair created
+- [ ] Both pets visible in panel after pairing
+- [ ] Message typed by User A appears above their pet on User B's screen within 200ms
+- [ ] Now-playing track shown on partner's screen within 200ms
+- [ ] Pet stats sync across both screens
+- [ ] pet-decay cron deploys and decrements stats on schedule
 
 ### Claude Code prompt
 
 ```
-Build Stage 3 of notchpets: Supabase backend, auth, pairing, and pet data sync.
+Build Stage 7 of notchpets: Supabase backend, auth, pairing, and real-time sync.
 
-Stages 1 and 2 are complete. SpriteKit pet rendering works with local data (UserDefaults).
-PetStore, Models, PetSlotView, and SetupWizard exist. Xcode project has supabase-swift
-package added. Supabase project is initialised (supabase/ directory exists).
+Stages 1–6 are complete. PetStore (UserDefaults), LocalMessageStore, and NowPlayingService
+all work locally. Xcode project has supabase-swift added. Supabase project is initialised.
 SUPABASE_URL and SUPABASE_ANON_KEY are available via Config.plist bundled in the app.
 
-Create supabase/migrations/001_schema.sql with:
+Create supabase/migrations/001_schema.sql:
 pairs (id, user_a, user_b, created_at)
 invites (id, code unique, creator_id, created_at, expires_at, accepted bool default false)
 pets (id, pair_id, owner_id, name, species, background, hunger int default 100,
-  happiness int default 100, last_fed, last_played, current_message,
-  message_sent_at, current_track_name, current_track_artist, updated_at)
-Enable RLS on all tables. Add a permissive policy for authenticated users for now.
+  happiness int default 100, last_fed, last_played, current_message, message_sent_at,
+  current_track_name, current_track_artist, updated_at)
+Enable RLS on all tables with permissive authenticated policies.
 
 Create supabase/functions/pet-decay/index.ts:
 - Deno cron every 30 minutes
-- UPDATE pets SET hunger = GREATEST(0, hunger - 5), happiness = GREATEST(0, happiness - 3)
+- UPDATE pets SET hunger = GREATEST(0, hunger-5), happiness = GREATEST(0, happiness-3)
 
 Create supabase/functions/invite-cleanup/index.ts:
 - Deno cron every hour
 - DELETE FROM invites WHERE expires_at < now() AND accepted = false
 
 Create notchpets/Data/SupabaseManager.swift:
-- Singleton actor SupabaseManager
-- Reads SUPABASE_URL and SUPABASE_ANON_KEY from Config.plist in the app bundle
-- Exposes `let client: SupabaseClient`
+- Singleton actor, reads Config.plist, exposes `let client: SupabaseClient`
 
 Create notchpets/Data/PetRepository.swift:
 - Actor PetRepository
 - func fetchPets(pairId: String) async throws -> [Pet]
-  SELECT * FROM pets WHERE pair_id = pairId
-- func insertPet(_ pet: PetInsert) async throws — inserts a new pet row
-
-Update notchpets/Data/Models.swift:
-- Add Codable structs for Pair and Invite (matching schema)
-- Add snake_case CodingKeys where needed
-- Add remaining Pet fields: pair_id, owner_id, last_fed, last_played, current_message,
-  message_sent_at, current_track_name, current_track_artist, updated_at
-
-Update notchpets/Data/PetStore.swift:
-- Replace UserDefaults persistence with Supabase via PetRepository
-- Add @Published var partnerPet: Pet?
-- Add @Published var myTrigger: AnimationState? and @Published var partnerTrigger: AnimationState?
-- func load(pairId: String, myUserId: String) async — fetches both pets via PetRepository
-- func subscribeRealtime(pairId: String) async:
-  - Subscribes to channel "pair:{pairId}" via SupabaseManager.client.realtimeV2
-  - On UPDATE to pets table: update myPet or partnerPet based on owner_id
-  - Infer animation trigger from delta: hunger decreased -> .eating, happiness decreased -> .playing,
-    track_name changed -> .dancing
-  - Set myTrigger / partnerTrigger, clear after 1 second
-- func unsubscribe() async
+- func insertPet(_ pet: Pet) async throws
+- func updateMessage(petId: UUID, message: String) async throws
+- func updateTrack(petId: UUID, title: String, artist: String) async throws
+- func updateHunger(petId: UUID, hunger: Int) async throws
+- func updateHappiness(petId: UUID, happiness: Int) async throws
 
 Create notchpets/Storage/KeychainService.swift:
-- Static functions: save(token: String, forKey: String), load(forKey: String) -> String?, delete(forKey: String)
-- Uses Security framework: SecItemAdd, SecItemCopyMatching, SecItemDelete
-- Keys used: "notchpets.session", "notchpets.pairId", "notchpets.userId"
+- Static save/load/delete using Security framework
+- Keys: "notchpets.session", "notchpets.pairId", "notchpets.userId"
 
 Create notchpets/Auth/AuthManager.swift:
-- @MainActor final class AuthManager: ObservableObject
-- @Published var session: Session? — loaded from Keychain on init via supabase.auth.session
-- @Published var pairId: String? — loaded from Keychain
-- func signInWithEmail(_ email: String) async throws — calls supabase.auth.signInWithOTP(email:)
-- func signOut() async — calls supabase.auth.signOut(), clears Keychain
-- func handleDeepLink(_ url: URL) async — processes magic link callback via supabase.auth.session(from:)
-- Saves session token to Keychain on session change using onAuthStateChange
+- @MainActor ObservableObject: session, pairId
+- signInWithEmail, signOut, handleDeepLink
 
 Create notchpets/Auth/AuthGate.swift:
-- SwiftUI View that observes AuthManager
-- If no session: show LoginView
-- If session but no pairId: show PairView
-- Otherwise: show PanelView
+- No session → LoginView
+- Session, no pairId → PairView
+- Session + pairId, no pet → SetupWizard
+- Session + pairId + pet → PanelView
 
-Create notchpets/Auth/LoginView.swift:
-- Email TextField + "Send magic link" Button
-- Calls authManager.signInWithEmail on button tap
-- Shows confirmation text after send
-- Full pixel art styling: dark background (#1a1a2e), pixel border, system monospaced font
+Create notchpets/Auth/LoginView.swift and notchpets/Auth/PairView.swift as per earlier spec.
 
-Create notchpets/Auth/PairView.swift:
-- TabView or segmented control: "Generate code" / "Enter code"
-- Generate tab:
-  - On appear, call generateInvite(): inserts into invites table with random 6-char code
-    (characters: A-Z, 2-9), expires_at = now() + 24 hours. Displays code in large text.
-- Enter tab:
-  - TextField for 6-char code. On submit:
-    1. Fetch invite WHERE code = input AND accepted = false AND expires_at > now()
-    2. INSERT into pairs (user_a = invite.creator_id, user_b = currentUserId)
-    3. UPDATE invites SET accepted = true WHERE id = invite.id
-    4. Save pair_id to Keychain via KeychainService
-    5. Set authManager.pairId to trigger AuthGate routing
+Update notchpets/Data/PetStore.swift:
+- Replace UserDefaults with Supabase via PetRepository
+- Add partnerPet populated from Realtime subscription on "pair:{pairId}"
+- On Realtime UPDATE: update myPet or partnerPet by owner_id
 
-Update notchpets/Setup/SetupWizard.swift:
-- On complete: call PetRepository.insertPet with pairId, ownerId, name, species, background,
-  hunger 100, happiness 100. Save petId to UserDefaults. Navigate to main panel.
+Update notchpets/Messaging/LocalMessageStore.swift → rename to MessageStore.swift:
+- On send: also call PetRepository.updateMessage — Realtime delivers to partner
+
+Update notchpets/NowPlaying/NowPlayingService.swift:
+- On track change: also call PetRepository.updateTrack — Realtime delivers to partner
+- Partner's track from petStore.partnerPet.current_track_name / current_track_artist
 
 Update notchpets/Views/PanelView.swift:
-- Render two PetSlotViews: myPet and partnerPet with trigger states from PetStore
+- Right slot now shows partnerPet from PetStore (real data, not placeholder)
+- Partner's music bubble reads from partnerPet track fields
 
-Update AppDelegate.swift:
-- Add @StateObject var authManager = AuthManager() to the app
-- Handle deep link URL via application(_:open:) -> call authManager.handleDeepLink(_:)
-- Register URL scheme in Info.plist: notchpets://
-
-Use Swift 5.9, async/await throughout. Handle loading and error states in all async calls.
+Swift 5.9, async/await throughout. Handle loading and error states.
 ```
 
 ---
 
-## Stage 4 — Interactions & messaging
-*Feed, play, speech bubbles, and real-time sync*
+## Stage 8 — Polish, notifications & packaging
+*Local notifications, settings panel, and .dmg build*
 
 ### Goal
 
-Either user can tap feed or play on either pet. Actions update Supabase, trigger animations on both screens in real time, and update hunger/happiness values. Users can type a message that appears as a pixel art speech bubble above their pet on both screens.
-
-### Files created this stage
-
-```
-notchpets/
-  Interactions/
-    InteractionService.swift  # Feed/play Supabase mutations with optimistic updates
-    PetControlsView.swift     # Feed + play buttons + hunger/happiness bars per pet slot
-  Messaging/
-    MessageBubble.swift       # Pixel art speech bubble overlay
-    MessageInput.swift        # Text input + send
-    MessageService.swift      # Send message, bubble visibility timer
-```
-
-### Interaction logic
-
-| | |
-|---|---|
-| **Feed** | `UPDATE pets SET hunger = LEAST(100, hunger + 30), last_fed = now()`. Stat update syncs to both clients via Realtime. Animation trigger deferred to v2. |
-| **Play** | `UPDATE pets SET happiness = LEAST(100, happiness + 25), last_played = now()`. Stat update syncs to both clients via Realtime. Animation trigger deferred to v2. |
-| **Message send** | `UPDATE pets SET current_message = text, message_sent_at = now()` for sender's pet. Realtime broadcasts to partner. |
-| **Message display** | Bubble renders above the pet. Fades out after 60 seconds via a client-side timer. New message resets the timer. |
-| **Optimistic UI** | Apply stat changes to PetStore locally immediately, then write to Supabase. Roll back on error. |
-| **Throw ball** | Deferred to v2 — requires spritesheet animations. |
-
-### Acceptance criteria
-
-- [ ] Feed button on either pet increments hunger and triggers eating animation on both screens
-- [ ] Play button on either pet increments happiness and triggers playing animation on both screens
-- [ ] Hunger and happiness values update visibly after interaction
-- [ ] Animation triggers arrive on the partner's screen within 200ms
-- [ ] Typing a message and sending renders a speech bubble above the sender's pet
-- [ ] The speech bubble appears on the partner's screen within 200ms
-- [ ] Sending a new message replaces the previous bubble immediately
-- [ ] Speech bubble fades out after 60 seconds with no new message
-- [ ] Optimistic updates are applied immediately, rolled back cleanly on error
-
-### Claude Code prompt
-
-```
-Build Stage 4 of notchpets: interactions (feed/play) and messaging.
-
-Stages 1–3 are complete. PetStore has myPet, partnerPet, myTrigger, partnerTrigger.
-Realtime subscription is live in PetStore. SupabaseManager.client is available.
-
-Create notchpets/Interactions/InteractionService.swift:
-- Actor InteractionService
-- func feed(petId: UUID, currentHunger: Int) async throws:
-  - Optimistically update PetStore.myPet or partnerPet hunger += 30 (capped 100)
-  - UPDATE pets SET hunger = LEAST(100, hunger + 30), last_fed = now() WHERE id = petId
-  - On error: roll back local change
-- func play(petId: UUID, currentHappiness: Int) async throws:
-  - Same pattern for happiness += 25
-  - On error: roll back
-
-Create notchpets/Interactions/PetControlsView.swift:
-- SwiftUI View, props: pet: Pet, isMine: Bool
-- Two pixel art icon buttons: 🦴 feed and ⚽ play (use text emoji as placeholder; swap for Image later)
-- Each button is 28x28, disabled while an optimistic update is in flight
-- Below buttons: two PixelProgressBar views for hunger and happiness (0–100)
-- PixelProgressBar: 60px wide, 6px tall, filled with colour blocks — no rounded corners
-
-Create notchpets/Messaging/MessageService.swift:
-- @MainActor final class MessageService: ObservableObject
-- @Published var myBubbleVisible: Bool and @Published var partnerBubbleVisible: Bool
-- Observes PetStore — when message_sent_at changes, restart a 60-second countdown Timer
-- func sendMessage(_ text: String, petId: UUID) async throws:
-  - UPDATE pets SET current_message = text, message_sent_at = now() WHERE id = petId
-
-Create notchpets/Messaging/MessageBubble.swift:
-- SwiftUI View, props: message: String?, visible: Bool
-- Pixel art speech bubble: Rectangle with a small triangle pointer at the bottom
-- System monospaced font 8pt, white text on #1a1a2e background
-- Max width 160px, text truncated at 48 chars
-- .opacity(visible ? 1 : 0).animation(.easeOut(duration: 0.4), value: visible)
-- Positioned via .overlay(alignment: .top) above the pet slot
-
-Create notchpets/Messaging/MessageInput.swift:
-- SwiftUI View, shown only for the user's own pet slot (isMine == true)
-- Small chat icon (💬) button below the pet; tap toggles a TextField overlay
-- TextField: max 48 chars, pixel art style, submit on Return or send button
-- On send: calls messageService.sendMessage, dismisses keyboard, hides input
-
-Update notchpets/Views/PanelView.swift:
-- Compose MessageBubble above each PetSlotView
-- Compose PetControlsView below each PetSlotView
-- Show MessageInput only for myPet slot
-
-Swift 5.9, @MainActor where needed. No additional packages.
-```
-
----
-
-## Stage 5 — Now playing detection
-*MediaRemote native integration + music bubble UI*
-
-### Goal
-
-The app reads the system now-playing info directly via the macOS MediaRemote private framework — no helper binary or child process required. Track data is written to Supabase and broadcast via Realtime so the music bubble appears above the correct pet on both screens. The pet dances briefly when the track changes.
-
-### Files created this stage
-
-```
-notchpets/
-  NowPlaying/
-    NowPlayingService.swift  # MediaRemote @_silgen_name declarations + change handler
-    MusicBubble.swift        # Small pixel art now-playing bubble
-```
-
-### MediaRemote integration details
-
-| | |
-|---|---|
-| **Framework** | MediaRemote — private, declared via `@_silgen_name` in Swift |
-| **Trigger** | `MRMediaRemoteRegisterNowPlayingInfoDidChangeHandler` — event-driven, no polling |
-| **Query** | `MRMediaRemoteGetNowPlayingInfo` — called inside the change handler |
-| **Keys** | `kMRMediaRemoteNowPlayingInfoTitle`, `kMRMediaRemoteNowPlayingInfoArtist`, `kMRMediaRemoteNowPlayingInfoPlaybackRate` |
-| **Output** | Publishes `(title: String, artist: String, playing: Bool)` via Combine |
-| **On nothing playing** | Publishes empty title + artist, playing = false |
-
-### Acceptance criteria
-
-- [ ] App receives track change events when music starts, stops, or changes
-- [ ] Track name and artist appear in the music bubble above the correct pet
-- [ ] Music bubble is hidden when nothing is playing
-- [ ] Partner's screen shows the same track bubble within 200ms
-- [ ] Pet dancing animation on track change deferred to v2
-- [ ] Works with Spotify, Apple Music, and browser-based audio
-- [ ] No polling — CPU usage is negligible when music is not changing
-
-### Claude Code prompt
-
-```
-Build Stage 5 of notchpets: native MediaRemote now-playing integration.
-
-Stages 1–4 are complete. PetStore Realtime subscription is live. pets table has
-current_track_name and current_track_artist columns. SupabaseManager.client is available.
-
-Create notchpets/NowPlaying/NowPlayingService.swift:
-- Use @_silgen_name to declare the following C functions from MediaRemote:
-  @_silgen_name("MRMediaRemoteRegisterNowPlayingInfoDidChangeHandler")
-  func MRMediaRemoteRegisterNowPlayingInfoDidChangeHandler(_ queue: DispatchQueue, _ handler: @escaping () -> Void)
-
-  @_silgen_name("MRMediaRemoteGetNowPlayingInfo")
-  func MRMediaRemoteGetNowPlayingInfo(_ queue: DispatchQueue, _ handler: @escaping ([String: Any]?) -> Void)
-
-- Constants (let, not @_silgen_name — they are string keys):
-  let kMRMediaRemoteNowPlayingInfoTitle = "kMRMediaRemoteNowPlayingInfoTitle"
-  let kMRMediaRemoteNowPlayingInfoArtist = "kMRMediaRemoteNowPlayingInfoArtist"
-  let kMRMediaRemoteNowPlayingInfoPlaybackRate = "kMRMediaRemoteNowPlayingInfoPlaybackRate"
-
-- @MainActor final class NowPlayingService: ObservableObject
-- @Published var currentTrack: TrackInfo? — struct TrackInfo: title, artist (both String)
-- func start(pairId: String, userId: String):
-  - Register the change handler on DispatchQueue.main
-  - Inside handler: call MRMediaRemoteGetNowPlayingInfo on DispatchQueue.main
-  - Extract title, artist, playbackRate from the info dict
-  - If playbackRate > 0 and title is non-empty: set currentTrack = TrackInfo(title:artist:)
-    and write to Supabase: UPDATE pets SET current_track_name = title,
-    current_track_artist = artist, updated_at = now()
-    WHERE owner_id = userId AND pair_id = pairId
-  - Debounce: only write to Supabase if title changed since last write
-  - If nothing playing: set currentTrack = nil, clear track columns in Supabase
-
-The Realtime UPDATE handler in PetStore already fires on track changes — add logic there:
-- If current_track_name changed in the incoming payload, set myTrigger or partnerTrigger to .dancing
-
-Create notchpets/NowPlaying/MusicBubble.swift:
-- SwiftUI View, props: track: TrackInfo?
-- Small pixel art bubble: music note "♪" + " title · artist" (truncated to 24 chars total)
-- System monospaced font 7pt, white on dark background
-- .opacity(track != nil ? 1 : 0).animation(.easeOut(duration: 0.3), value: track != nil)
-- Positioned above MessageBubble via stacked .overlay in PanelView
-
-Update notchpets/Views/PanelView.swift:
-- Inject NowPlayingService as @EnvironmentObject
-- Overlay MusicBubble above each pet's MessageBubble
-- My pet shows NowPlayingService.currentTrack; partner's pet shows from petStore.partnerPet track fields
-
-Call nowPlayingService.start(pairId:userId:) in AppDelegate after session and pairId are confirmed.
-
-Swift 5.9. No additional packages. No child process — MediaRemote is called in-process.
-```
-
----
-
-## Stage 6 — Polish, notifications & packaging
-*Final UX, alerts, Sparkle updates, and .dmg build*
-
-### Goal
-
-Local notifications alert users when a pet is hungry or sad. The settings panel allows background and name changes. SpriteKit scenes pause when the panel is collapsed. The app packages as a signed .dmg with Sparkle auto-update support.
+Local notifications alert users when a pet is hungry or sad. The settings panel allows background and name changes. The app packages as a signed .dmg with Sparkle auto-update support.
 
 ### Files created this stage
 
@@ -639,155 +721,62 @@ Local notifications alert users when a pet is hungry or sad. The settings panel 
 notchpets/
   Notifications/
     NotificationService.swift  # UNUserNotificationCenter wrapper
-    PetMonitor.swift           # Polls pet stats, triggers notifications
+    PetMonitor.swift           # Watches pet stats, fires notifications
   Settings/
     SettingsView.swift         # Gear icon overlay: name, background, sign out
-    SettingsService.swift      # Update pet name / background in Supabase
+    SettingsService.swift      # Update name/background in Supabase
 ```
-
-### Polish checklist
-
-| | |
-|---|---|
-| **SpriteKit pause** | Set `petScene.isPaused = true` when panel collapses, `false` on expand. Reduces CPU/battery to near zero when hidden. |
-| **Notification: hungry** | Local macOS notification when own or partner's pet hunger drops below 20. Fire once per threshold crossing. |
-| **Notification: sad** | Same pattern for happiness < 20. |
-| **Settings panel** | Gear icon in top-right of expanded panel. Opens overlay with: change pet name, change background, sign out. |
-| **Name/background sync** | Changes write to Supabase pets table. Realtime broadcasts update to partner's panel immediately. |
-| **Offline indicator** | If Realtime connection drops, show a small pixel art disconnected icon. Auto-reconnects via supabase-swift channel reconnect. |
-| **App icon** | Pixel art icon in Assets.xcassets — AppIcon image set with all required sizes. |
-| **Sparkle** | Add SUFeedURL to Info.plist pointing to an appcast XML hosted wherever you distribute the .dmg. |
-| **.dmg packaging** | Xcode Archive → Export with Developer ID → use `create-dmg` to wrap into a distributable .dmg. |
 
 ### Acceptance criteria
 
-- [ ] CPU usage drops to <1% when panel is collapsed (verify in Activity Monitor)
 - [ ] Local notification fires when pet hunger crosses below 20
 - [ ] Local notification fires when pet happiness crosses below 20
-- [ ] Notifications do not repeat until stat recovers above 20 then drops again
-- [ ] Notification permission is requested on first launch
+- [ ] Notifications do not repeat until stat recovers then drops again
 - [ ] Settings panel opens and closes cleanly
-- [ ] Changing pet name updates on both screens within 200ms
-- [ ] Changing background updates on both screens within 200ms
-- [ ] Sign out clears Keychain session and returns to login screen
-- [ ] Xcode Archive produces a valid signed app that installs and runs on macOS
+- [ ] Changing pet name or background syncs to partner's screen within 200ms
+- [ ] Sign out clears Keychain and returns to login screen
+- [ ] Xcode Archive produces a valid signed .app
 - [ ] Sparkle checks for updates on launch
 
 ### Claude Code prompt
 
 ```
-Build Stage 6 of notchpets: notifications, settings panel, SpriteKit pause, and packaging prep.
+Build Stage 8 of notchpets: notifications, settings panel, and packaging prep.
 
-Stages 1–5 are complete and working. App renders, syncs, plays animations,
-and detects now-playing. This stage is polish and packaging only.
+Stages 1–7 are complete. App is fully synced via Supabase Realtime.
 
 Create notchpets/Notifications/NotificationService.swift:
-- @MainActor final class NotificationService
-- func requestPermission() async — calls UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
-- func send(title: String, body: String) — creates UNMutableNotificationContent, fires immediately
-  (UNNotificationRequest with nil trigger)
+- func requestPermission() async
+- func send(title: String, body: String)
 
 Create notchpets/Notifications/PetMonitor.swift:
-- @MainActor final class PetMonitor
-- Observes PetStore.myPet and PetStore.partnerPet via Combine sink
-- Tracks last-notified state to avoid repeat notifications (Bool flags: myHungryNotified, etc.)
-- On hunger < 20: call NotificationService.send if not already notified
-- On hunger >= 30: reset the flag
-- Same pattern for happiness < 20
+- Observes PetStore.myPet and partnerPet via Combine
+- Fires notification on hunger < 20 or happiness < 20 (once per threshold crossing)
 
 Create notchpets/Settings/SettingsService.swift:
-- Actor SettingsService
-- func updateName(petId: UUID, name: String) async throws:
-  UPDATE pets SET name = name WHERE id = petId
-- func updateBackground(petId: UUID, background: String) async throws:
-  UPDATE pets SET background = background WHERE id = petId
+- func updateName(petId: UUID, name: String) async throws
+- func updateBackground(petId: UUID, background: String) async throws
 
 Create notchpets/Settings/SettingsView.swift:
-- SwiftUI View, shown as overlay when gear icon is tapped
-- Three sections:
-  1. Pet name TextField (pre-filled, 12 char max) + Save button
-  2. BackgroundPicker (reuse Stage 3 component) with current background highlighted
-  3. Sign out Button — calls authManager.signOut(), clears Keychain, routes back to LoginView
-- Pixel art styling: dark background, pixel border, system monospaced font
-
-Update notchpets/Window/NotchWindowController.swift:
-- On collapse: set petStore scenes to isPaused = true via a published flag
-- On expand: set isPaused = false
+- Name TextField + Save, BackgroundPicker, Sign out button
+- Writes changes via SettingsService
 
 Update notchpets/Views/PanelView.swift:
-- Add gear icon (⚙) in top-right corner of the pet area, visible when expanded
-- Tapping gear shows SettingsView as a .sheet or ZStack overlay
+- Gear icon (⚙) in top-right of expanded panel → shows SettingsView overlay
 
-Update notchpets/App/AppDelegate.swift:
-- Call notificationService.requestPermission() on first launch (guard with UserDefaults flag)
+Update AppDelegate.swift:
+- Request notification permission on first launch
 - Initialise PetMonitor after PetStore loads
 
 For packaging:
-- Ensure LSUIElement = YES in Info.plist (hides Dock icon)
-- Add SUFeedURL key to Info.plist for Sparkle appcast URL
-- Add Hardened Runtime capability in Xcode signing settings (required for notarization)
-- In Xcode: Product → Archive → Distribute App → Developer ID → export .app
-- Use create-dmg (brew install create-dmg) to wrap:
-  create-dmg --volname "notchpets" --app-drop-link 600 185 notchpets.dmg notchpets.app
+- LSUIElement = YES in Info.plist
+- SUFeedURL in Info.plist for Sparkle
+- Hardened Runtime capability in Xcode signing
+- Product → Archive → Distribute App → Developer ID
+- create-dmg --volname "notchpets" --app-drop-link 600 185 notchpets.dmg notchpets.app
 
-Swift 5.9 throughout. After this stage the app is fully functional and distributable.
+Swift 5.9 throughout.
 ```
-
----
-
-## Stage 7 — SpriteKit animations (v2)
-*Replace static images with animated spritesheets*
-
-### Goal
-
-Replace the static `Image` pet rendering with SpriteKit. Wire animation triggers to feed, play, now-playing, and ball-catch events. All core real-time features must be stable before starting this stage.
-
-### Files created this stage
-
-```
-notchpets/
-  Pet/
-    AnimationState.swift     # AnimationState enum (idle, happy, eating, playing, sleeping, sad, dancing, run, jump, catch, land)
-    SpriteManifest.swift     # Frame definitions per species and animation state
-    PetScene.swift           # SKScene: draws background + pet sprite, runs animation
-    PetSpriteNode.swift      # SKSpriteNode subclass: loads atlas, manages state transitions
-  Views/
-    PetSlotView.swift        # Updated: SpriteView wrapping PetScene (replaces static Image)
-  Assets.xcassets/           # Replace static species PNGs with .spriteatlas folders
-```
-
-### Animation state machine
-
-| State | Behaviour |
-|---|---|
-| **idle** | Default. Breathing loop ~2s. Triggered on init and after any other state completes. |
-| **happy** | Bouncing loop. Triggered when feed or play action is received. Plays once then returns to idle. |
-| **eating** | Nom animation. Triggered by feed action. Plays once then returns to idle. |
-| **playing** | Running or spinning. Triggered by play action. Plays once then returns to idle. |
-| **sleeping** | zZz loop. Auto-triggered when happiness < 20. Overrides idle until happiness >= 20. |
-| **sad** | Drooping loop. Auto-triggered when hunger < 20. Overrides idle until hunger >= 20. |
-| **dancing** | Short dance loop. Triggered when current_track changes. Plays once then returns to idle. |
-| **run** | Legs cycling. Plays on loop while pet moves horizontally across panel during ball-catch sequence. Driven by SpriteKit `SKAction.moveBy` in parallel. |
-| **jump** | Rise → peak → fall arc. Plays once during ball approach. Non-looping. |
-| **catch** | Reach/grab moment. Plays once on successful catch. Non-looping. |
-| **land** | Impact squash on landing. Plays once then returns to idle. Non-looping. |
-
-Full ball-catch sequence: `idle → run (looping while moving) → jump → catch → land → idle`. The ball is a separate `SKSpriteNode` with its own spin animation travelling across the panel.
-
-### Asset sourcing note
-
-Each species needs a single spritesheet PNG (11 rows × 6 frames, 32×32px per frame, transparent background) added to `Assets.xcassets` as a `.spriteatlas`. Source from itch.io or generate with the spritesheet prompt. All 8 background images remain as static Image Sets.
-
-### Acceptance criteria
-
-- [ ] All 6 species render via SpriteKit with idle animation playing
-- [ ] Feed triggers eating animation on both screens via Realtime
-- [ ] Play triggers playing animation on both screens via Realtime
-- [ ] Track change triggers dancing animation on both screens
-- [ ] Sad state auto-triggers when hunger < 20
-- [ ] Sleeping state auto-triggers when happiness < 20
-- [ ] Ball-catch sequence plays end-to-end on throw
-- [ ] SpriteKit scenes pause when panel is collapsed
 
 ---
 
@@ -795,7 +784,7 @@ Each species needs a single spritesheet PNG (11 rows × 6 frames, 32×32px per f
 
 - Always start a new session by telling Claude Code which stage you are on and pasting the full stage prompt.
 - If Claude Code produces code that compiles but fails an acceptance criterion, describe the failure precisely — do not just say "it doesn't work".
-- MediaRemote (Stage 5) can be tested standalone before integration: create a small Swift command-line tool with just the `@_silgen_name` declarations and `dispatchMain()`, run it in Terminal, and confirm JSON emits when you change tracks.
+- MediaRemote (Stage 6) can be tested standalone before integration: create a small Swift command-line tool with just the `@_silgen_name` declarations and `dispatchMain()`, run it in Terminal, and confirm track info emits when you change tracks.
 - Supabase Realtime in Swift can have type inference issues with the generic payload — if you hit compile errors on the change handler, use explicit `[String: AnyJSON]` typing and revisit.
 - SpriteKit texture atlases must be added as `.spriteatlas` folders in Assets.xcassets, not individual image sets — this affects how `SKTextureAtlas(named:)` loads them.
 - Pixel art asset quality matters more than code quality for the feel of the app. Spend time sourcing good spritesheets before starting Stage 3.
@@ -804,4 +793,4 @@ Each species needs a single spritesheet PNG (11 rows × 6 frames, 32×32px per f
 
 ---
 
-*notchpets — Implementation Plan v2.0 — March 2026*
+*notchpets — Implementation Plan v2.1 — March 2026*
