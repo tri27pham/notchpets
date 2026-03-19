@@ -1,11 +1,11 @@
 # notchpets — Product Requirements Document
-**v1.0 — March 2026**
+**v2.0 — March 2026**
 
 ---
 
 ## 1. Overview
 
-notchpets is a macOS menu bar / notch companion app for two people. Each user has a pixel art pet that lives in a shared panel beneath the MacBook notch. Both pets are visible to both users in real time — you can see your partner's pet, interact with it, watch it react to whatever they are listening to, and send each other messages as floating pixel art speech bubbles.
+notchpets is a macOS menu bar / notch companion app for two people. Each user has a pixel art pet that lives in a shared panel surrounding the MacBook notch. Both pets are visible to both users in real time — you can see your partner's pet, interact with it, watch it react to whatever they are listening to, and send each other messages as floating pixel art speech bubbles.
 
 The experience is intimate and ambient — always there, never intrusive. It is built for couples, close friends, or long-distance pairs who want a persistent, playful presence on each other's screens.
 
@@ -24,8 +24,8 @@ The experience is intimate and ambient — always there, never intrusive. It is 
 
 ### 3.1 Primary goals
 
-- Ship a working macOS Electron app that two users can link together via an invite code.
-- Render two pixel art pets side by side in a notch-adjacent panel, each in their own customisable pixel art background.
+- Ship a working native macOS app that two users can link together via an invite code.
+- Render two pixel art pets side by side in a notch-surrounding panel, each in their own customisable pixel art background.
 - Sync all pet state, interactions, now-playing data, and messages in real time across both machines.
 - Make the experience feel delightful — pixel art aesthetic throughout, smooth animations, zero latency feel.
 
@@ -55,15 +55,18 @@ notchpets is designed for exactly two users linked as a pair. There is no solo m
 
 | | |
 |---|---|
-| **App framework** | Electron + React + TypeScript |
-| **Styling** | CSS Modules — pixel art aesthetic, bitmap fonts |
-| **Pet rendering** | HTML Canvas with requestAnimationFrame sprite animation |
+| **App framework** | SwiftUI + AppKit (NSPanel for the notch window) |
+| **Pet rendering** | SpriteKit via `SpriteView` — pixel art spritesheet animation |
 | **Backend** | Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) |
+| **Supabase client** | supabase-swift SDK — Auth, PostgREST, Realtime channels |
 | **Real-time sync** | Supabase Realtime — WebSocket channels keyed on pair ID |
-| **Now-playing detection** | macOS MediaRemote private framework via compiled Swift helper binary — system-wide, works with any audio app, no OAuth required |
+| **Now-playing detection** | macOS MediaRemote private framework via `@_silgen_name` — integrated directly, no helper binary |
 | **Asset pipeline** | Pixel art spritesheets sourced from itch.io (CC0 / licensed packs) |
-| **Distribution** | Direct download .dmg, auto-update via electron-updater |
-| **Notch positioning** | Frameless transparent BrowserWindow positioned below notch safe area |
+| **Session storage** | macOS Keychain via Security framework |
+| **Auto-updates** | Sparkle framework |
+| **Distribution** | Direct download .dmg, signed with Developer ID |
+| **Notch positioning** | NSPanel with `level = .mainMenu + 3`, positioned using `NSScreen.safeAreaInsets` and `auxiliaryTopLeftArea` / `auxiliaryTopRightArea` |
+| **Minimum macOS** | macOS 13 Ventura |
 
 ---
 
@@ -71,14 +74,16 @@ notchpets is designed for exactly two users linked as a pair. There is no solo m
 
 ### 6.1 Notch panel
 
-The app renders a frameless, transparent Electron window positioned directly beneath the MacBook notch. The panel is hidden by default and expands downward on hover or click of the notch region.
+The app renders a borderless, transparent NSPanel that surrounds the MacBook notch. The notch cap (the area over the physical hardware cutout) is transparent, blending with the natural black of the display. The panel expands downward on hover or click of the notch region.
 
-- Panel dimensions: ~400px wide × ~160px tall when expanded
-- Collapsed state: thin 4px indicator strip visible at notch edge
-- Expand/collapse: smooth pixel-art slide animation on hover
-- Always on top: window level set to float above all other apps
-- Multi-space: panel persists across all macOS Spaces and full-screen apps
-- macOS version support: macOS 12 Monterey and above (notch introduced on MacBook Pro 14/16 2021)
+- Panel width: matched precisely to the physical notch width using `NSScreen.auxiliaryTopLeftArea` and `auxiliaryTopRightArea`
+- Notch cap height: matched to `NSScreen.safeAreaInsets.top` — the physical notch height
+- Expanded height: ~160px below the notch cap
+- Collapsed state: notch cap only — thin visible presence at the notch edges
+- Expand/collapse: smooth SwiftUI animation on hover via `NSTrackingArea`
+- Always on top: `level = .mainMenu + 3` — floats above all other apps
+- Multi-space: `collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]`
+- macOS version support: macOS 13 Ventura and above
 
 ### 6.2 Account system & pairing
 
@@ -89,7 +94,7 @@ Users sign up with email (magic link via Supabase Auth). After creating an accou
 | **Auth method** | Magic link email (no passwords) |
 | **Pairing** | 6-character alphanumeric invite code, expires after 24 hours |
 | **Pair structure** | One-to-one, permanent — no re-pairing in v1 |
-| **Session** | Persistent login stored in Electron keychain, auto-refresh |
+| **Session** | Persistent login stored in macOS Keychain, auto-refresh via supabase-swift |
 
 ### 6.3 Pets
 
@@ -159,15 +164,15 @@ Either user can send a message that appears as a pixel art speech bubble above t
 
 The app automatically detects whatever is currently playing on each user's machine using the macOS MediaRemote private framework — the same system used by Boring Notch, NowPlaying CLI, and the macOS lock screen media controls. No account connection or OAuth required. Works with Spotify, Apple Music, YouTube, or any app that registers with the system audio session.
 
-A small Swift helper binary is compiled and shipped with the app. Electron spawns it as a child process on launch and reads track info from stdout. The helper registers a MediaRemote notification listener and emits JSON whenever the now-playing info changes.
+MediaRemote is integrated directly into the Swift app via `@_silgen_name` function declarations. No separate helper binary or child process is needed — the app subscribes to now-playing change notifications natively on the main process.
 
 | | |
 |---|---|
 | **Detection method** | macOS MediaRemote framework (private API, safe for direct .dmg distribution) |
-| **Helper** | Compiled Swift binary bundled with the Electron app, spawned as child process |
+| **Integration** | Native Swift — `@_silgen_name` declarations, no helper binary required |
 | **Works with** | Any app registered with the system audio session — Spotify, Apple Music, browser, etc. |
 | **Data** | Track title + artist name, playing/paused state |
-| **Update trigger** | Event-driven via MRMediaRemoteRegisterNowPlayingInfoDidChangeHandler — no polling |
+| **Update trigger** | Event-driven via `MRMediaRemoteRegisterNowPlayingInfoDidChangeHandler` — no polling |
 | **Display** | Small pixel art bubble above the pet: music note icon + track name + artist (truncated to 24 chars) |
 | **Sync** | Track info written to pets table on change, broadcast via Realtime to partner's screen |
 | **No playback** | Bubble hidden when nothing is playing or machine is paused |
@@ -221,7 +226,7 @@ A small Swift helper binary is compiled and shipped with the app. Electron spawn
 
 ## 8. Real-time sync
 
-All state is stored in Postgres. Both Electron clients subscribe to a Supabase Realtime channel keyed on their pair ID. Any mutation to the pets table (feed, play, message, now-playing update, background change) broadcasts to both subscribers immediately.
+All state is stored in Postgres. Both Swift clients subscribe to a Supabase Realtime channel keyed on their pair ID via the supabase-swift SDK. Any mutation to the pets table (feed, play, message, now-playing update, background change) broadcasts to both subscribers immediately.
 
 | | |
 |---|---|
@@ -275,7 +280,7 @@ Accessible via a gear icon in the expanded notch panel. Settings are personal �
 | **Change pet background** | Personal — only changes your pet's background scene. Syncs to partner's view. |
 | **Change pet name** | Personal — renames your pet. Syncs to partner's view. |
 | **Notification preferences** | Personal — toggle hunger / happiness alerts on/off. |
-| **Sign out** | Clears session. Pet remains in Postgres, stats continue decaying. |
+| **Sign out** | Clears session from Keychain. Pet remains in Postgres, stats continue decaying. |
 | **Delete pair** | Destructive. Removes the pair permanently. Requires confirmation. |
 
 ---
@@ -284,12 +289,12 @@ Accessible via a gear icon in the expanded notch panel. Settings are personal �
 
 Recommended implementation sequence for a vibe-coded build with heavy Claude Code usage:
 
-- **Day 1** — Electron app shell. Frameless transparent window. Notch positioning. Static pixel art panel renders correctly beneath notch.
-- **Day 2** — Supabase schema, Auth magic link, invite/pairing flow, basic settings panel.
-- **Day 3** — Pet canvas rendering, spritesheet animation state machine, background scenes, Realtime subscriptions wired up.
-- **Day 4** — Feed/play interactions, message bubbles, speech bubble pixel art UI, free text input.
-- **Day 5** — Swift MediaRemote helper binary, now-playing bubble UI, Realtime sync of track data, pet dance reaction on track change.
-- **Buffer** — Pet decay cron, local notifications, polish, edge cases, .dmg packaging.
+- **Day 1** — Swift/SwiftUI app shell. NSPanel notch window with true notch surround. `NSScreen` APIs for exact notch dimensions. Hover expand/collapse via `NSTrackingArea`. Static pixel art panel renders correctly.
+- **Day 2** — Supabase schema, supabase-swift Auth magic link, invite/pairing flow, Keychain session storage.
+- **Day 3** — SpriteKit pet rendering, spritesheet animation state machine, background scenes, Realtime subscriptions wired up.
+- **Day 4** — Feed/play interactions, message bubbles, speech bubble UI, free text input.
+- **Day 5** — MediaRemote now-playing integration (native Swift, no helper binary), music bubble UI, Realtime sync of track data, pet dance reaction on track change.
+- **Buffer** — Pet decay cron, local notifications via `UNUserNotificationCenter`, Sparkle auto-updates, polish, .dmg packaging.
 
 ---
 
@@ -306,4 +311,4 @@ Recommended implementation sequence for a vibe-coded build with heavy Claude Cod
 
 ---
 
-*notchpets — PRD v1.0 — March 2026*
+*notchpets — PRD v2.0 — March 2026*
