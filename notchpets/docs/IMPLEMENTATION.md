@@ -211,6 +211,12 @@ notchpets/
 | **sleeping** | zZz loop. Auto-triggered when happiness < 20. Overrides idle until happiness >= 20. |
 | **sad** | Drooping loop. Auto-triggered when hunger < 20. Overrides idle until hunger >= 20. |
 | **dancing** | Short dance loop. Triggered when current_track changes. Plays once then returns to idle. |
+| **run** | Legs cycling. Plays on loop while pet moves horizontally across panel during ball-catch sequence. Driven by SpriteKit `SKAction.moveBy` in parallel. |
+| **jump** | Rise → peak → fall arc. Plays once during ball approach. Non-looping. |
+| **catch** | Reach/grab moment. Plays once on successful catch. Non-looping. |
+| **land** | Impact squash on landing. Plays once then returns to idle. Non-looping. |
+
+Full ball-catch sequence: `idle → run (looping while moving) → jump → catch → land → idle`. The ball is a separate `SKSpriteNode` with its own spin animation travelling across the panel. Throw action writes to Supabase and is broadcast via Realtime so both screens animate in sync.
 
 ### Asset sourcing note
 
@@ -238,7 +244,7 @@ Stage 1 is complete. No backend yet — all pet data is stored locally via UserD
 Sprite atlas PNGs are already added to Assets.xcassets. Background PNGs are Image Sets.
 
 Create notchpets/Pet/AnimationState.swift:
-- Enum AnimationState: String — idle, happy, eating, playing, sleeping, sad, dancing
+- Enum AnimationState: String — idle, happy, eating, playing, sleeping, sad, dancing, run, jump, catch, land
 - Static func autoState(hunger: Int, happiness: Int) -> AnimationState:
   Returns .sad if hunger < 20, .sleeping if happiness < 20, else .idle
 
@@ -246,7 +252,8 @@ Create notchpets/Pet/SpriteManifest.swift:
 - Struct AnimationDef: row (Int), frameCount (Int), fps (Int), loops (Bool)
 - Struct SpeciesManifest: frameWidth, frameHeight, animations: [AnimationState: AnimationDef]
 - Let manifest: [String: SpeciesManifest] — defines all 6 species:
-  cat, dog, frog, panda, penguin, rabbit, each with all 7 animation states
+  cat, dog, frog, panda, penguin, rabbit, each with all 11 animation states
+  (idle, happy, eating, playing, sleeping, sad, dancing, run, jump, catch, land)
 
 Create notchpets/Pet/PetSpriteNode.swift:
 - Class PetSpriteNode: SKSpriteNode
@@ -533,6 +540,7 @@ notchpets/
 | **Message send** | `UPDATE pets SET current_message = text, message_sent_at = now()` for sender's pet. Realtime broadcasts to partner. |
 | **Message display** | Bubble renders above the pet. Fades out after 60 seconds via a client-side timer. New message resets the timer. |
 | **Optimistic UI** | Apply stat changes to PetStore locally immediately, then write to Supabase. Roll back on error. |
+| **Throw ball** | `UPDATE pets SET happiness = LEAST(100, happiness + 10)`. Triggers `run → jump → catch → land` sequence via Realtime on both clients. Ball sprite animates across panel in parallel via `SKAction.moveBy`. |
 
 ### Acceptance criteria
 

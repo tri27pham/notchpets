@@ -118,6 +118,10 @@ Each species has a full pixel art spritesheet with the following animation state
 - **sleeping** — zZz loop, triggered when happiness < 20
 - **sad** — drooping loop, triggered when hunger < 20
 - **dancing** — short dance loop, triggered when track changes
+- **run** — legs cycling, used while pet moves horizontally across the panel
+- **jump** — rise → peak → fall arc, used during ball catch approach
+- **catch** — reach/grab moment, plays once on successful catch
+- **land** — impact squash on landing, blends back to idle
 
 #### Pet stats
 
@@ -147,7 +151,20 @@ Each user independently selects a pixel art background scene for their pet. The 
 
 Backgrounds are static pixel art scenes at 200×160px. No parallax or animation in v1. User selects via a scene picker in the settings panel.
 
-### 6.5 Messages
+### 6.5 Ball-catching mini-game
+
+Either user can throw a ball to either pet. The pet runs across the panel to catch it, jumps, grabs the ball, lands, then returns to idle. The ball is a separate sprite that travels across the screen as the pet moves toward it.
+
+| | |
+|---|---|
+| **Trigger** | User taps a throw button in the interaction controls |
+| **Sequence** | idle → run (looping while moving) → jump → catch → land → idle |
+| **Pet movement** | SpriteKit `SKAction.moveBy` moves the sprite's x position while the run frames cycle |
+| **Ball sprite** | Separate sprite with a short spin animation, travels from one side to the other |
+| **Sync** | Throw action written to Supabase, broadcast via Realtime — both screens see the animation |
+| **Happiness effect** | Successful catch grants +10 happiness |
+
+### 6.6 Messages
 
 Either user can send a message that appears as a pixel art speech bubble above their own pet. Only one message exists at a time per user — sending a new message replaces the previous one. Messages are free text, capped at 48 characters to fit the bubble.
 
@@ -160,7 +177,7 @@ Either user can send a message that appears as a pixel art speech bubble above t
 | **Fade** | Bubble fades out after 60 seconds if no new message is sent |
 | **Font** | Pixel bitmap font (e.g. Press Start 2P or similar CC0 font) |
 
-### 6.6 Now playing
+### 6.7 Now playing
 
 The app automatically detects whatever is currently playing on each user's machine using the macOS MediaRemote private framework — the same system used by Boring Notch, NowPlaying CLI, and the macOS lock screen media controls. No account connection or OAuth required. Works with Spotify, Apple Music, YouTube, or any app that registers with the system audio session.
 
