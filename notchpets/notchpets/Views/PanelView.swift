@@ -1,9 +1,14 @@
 import SwiftUI
+import Combine
 
 struct PanelView: View {
     @ObservedObject var state: PanelState
     let metrics: NotchMetrics
     @StateObject private var petStore = PetStore()
+    @StateObject private var mySceneHolder = PetSceneHolder(species: "penguin", background: "japan_background")
+    @StateObject private var partnerSceneHolder = PetSceneHolder(species: "penguin", background: "bedroom_background")
+    @State private var statMonitor: PetStatMonitor?
+    @State private var statCancellable: AnyCancellable?
 
     private let openAnimation  = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
     private let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
@@ -34,6 +39,29 @@ struct PanelView: View {
                 value: state.isExpanded
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .onAppear {
+                let monitor = PetStatMonitor(petStore: petStore)
+                statMonitor = monitor
+
+                // Wire stat monitor → pet scene animations
+                statCancellable = monitor.$triggeredState
+                    .sink { triggered in
+                        guard let triggered else { return }
+                        mySceneHolder.scene.trigger(triggered)
+                    }
+
+                // Wire pet scene interactions → stat changes
+                mySceneHolder.scene.onInteraction = { [weak petStore] animState in
+                    guard let petStore else { return }
+                    switch animState {
+                    case .playing:
+                        petStore.play()
+                    default:
+                        break
+                    }
+                    statMonitor?.recordInteraction()
+                }
+            }
     }
 
     // MARK: – Notch content
@@ -78,22 +106,39 @@ struct PanelView: View {
 
     private var expandedContent: some View {
         HStack(spacing: 10) {
-            myPetSlot
+            myPetColumn
             partnerPetSlot
         }
     }
 
-    private var myPetSlot: PetSlotView {
-        PetSlotView(
-            background: petStore.myPet?.background ?? "japan_background",
-            species: petStore.myPet?.species ?? "penguin"
-        )
+    private var myPetColumn: some View {
+        VStack(spacing: 6) {
+            PetSlotView(
+                background: petStore.myPet?.background ?? "japan_background",
+                species: petStore.myPet?.species ?? "penguin",
+                sceneHolder: mySceneHolder
+            )
+
+            InteractionBar(
+                onFeed: {
+                    petStore.feed()
+                    mySceneHolder.scene.trigger(.eating)
+                    statMonitor?.recordInteraction()
+                },
+                onPlay: {
+                    petStore.play()
+                    mySceneHolder.scene.trigger(.playing)
+                    statMonitor?.recordInteraction()
+                }
+            )
+        }
     }
 
     private var partnerPetSlot: some View {
         PetSlotView(
             background: petStore.partnerPet?.background ?? "bedroom_background",
-            species: petStore.partnerPet?.species ?? "penguin"
+            species: petStore.partnerPet?.species ?? "penguin",
+            sceneHolder: partnerSceneHolder
         )
         .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
     }

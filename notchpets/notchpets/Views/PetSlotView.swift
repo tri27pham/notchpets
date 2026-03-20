@@ -1,34 +1,14 @@
 import SwiftUI
 import SpriteKit
-import Combine
-
-class PetSceneHolder: ObservableObject {
-    let scene: PetScene
-
-    init(species: String, background: String) {
-        scene = PetScene(
-            size: CGSize(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT),
-            species: species,
-            background: background
-        )
-    }
-}
 
 struct PetSlotView: View {
     let background: String
     let species: String
-
-    @StateObject private var holder: PetSceneHolder
-
-    init(background: String, species: String) {
-        self.background = background
-        self.species = species
-        _holder = StateObject(wrappedValue: PetSceneHolder(species: species, background: background))
-    }
+    @ObservedObject var sceneHolder: PetSceneHolder
 
     var body: some View {
         if species == "penguin" {
-            SpriteView(scene: holder.scene, options: [.allowsTransparency])
+            SpriteView(scene: sceneHolder.scene, options: [.allowsTransparency])
                 .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         } else {
@@ -53,9 +33,5 @@ struct PetSlotView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    func trigger(_ state: AnimationState) {
-        holder.scene.trigger(state)
     }
 }

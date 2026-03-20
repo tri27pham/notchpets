@@ -28,4 +28,16 @@ final class PetStore: ObservableObject {
             myPet = pet
         }
     }
+
+    func feed() {
+        guard var pet = myPet else { return }
+        pet.hunger = min(100, pet.hunger + 30)
+        save(pet)
+    }
+
+    func play() {
+        guard var pet = myPet else { return }
+        pet.happiness = min(100, pet.happiness + 25)
+        save(pet)
+    }
 }
