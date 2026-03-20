@@ -112,14 +112,19 @@ struct PanelView: View {
     }
 
     private var myPetColumn: some View {
-        VStack(spacing: 6) {
-            PetSlotView(
-                background: petStore.myPet?.background ?? "japan_background",
-                species: petStore.myPet?.species ?? "penguin",
-                sceneHolder: mySceneHolder
+        PetSlotView(
+            background: petStore.myPet?.background ?? "japan_background",
+            species: petStore.myPet?.species ?? "penguin",
+            sceneHolder: mySceneHolder
+        )
+        .overlay(alignment: .top) {
+            StatBarsOverlay(
+                hunger: petStore.myPet?.hunger ?? 100,
+                happiness: petStore.myPet?.happiness ?? 100
             )
-
-            InteractionBar(
+        }
+        .overlay(alignment: .bottom) {
+            ActionButtonsOverlay(
                 onFeed: {
                     petStore.feed()
                     mySceneHolder.scene.trigger(.eating)

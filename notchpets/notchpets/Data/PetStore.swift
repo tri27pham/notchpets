@@ -7,9 +7,16 @@ final class PetStore: ObservableObject {
     @Published var partnerPet: Pet?
 
     private let myPetKey = "notchpets.myPet"
+    private let decayInterval: TimeInterval = 30 * 60 // 30 minutes
+    private var decayTimer: Timer?
 
     init() {
         load()
+        startDecayTimer()
+    }
+
+    deinit {
+        decayTimer?.invalidate()
     }
 
     func load() {
@@ -38,6 +45,23 @@ final class PetStore: ObservableObject {
     func play() {
         guard var pet = myPet else { return }
         pet.happiness = min(100, pet.happiness + 25)
+        save(pet)
+    }
+
+    // MARK: - Stat decay
+
+    private func startDecayTimer() {
+        decayTimer = Timer.scheduledTimer(withTimeInterval: decayInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.decay()
+            }
+        }
+    }
+
+    private func decay() {
+        guard var pet = myPet else { return }
+        pet.hunger = max(0, pet.hunger - 5)
+        pet.happiness = max(0, pet.happiness - 3)
         save(pet)
     }
 }
