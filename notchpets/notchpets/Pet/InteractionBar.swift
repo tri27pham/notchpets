@@ -6,8 +6,8 @@ struct StatBarsOverlay: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            StatBar(icon: "fork.knife", value: hunger, color: .orange)
-            StatBar(icon: "heart.fill", value: happiness, color: .pink)
+            StatBar(type: .health, value: happiness)
+            StatBar(type: .food, value: hunger)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
