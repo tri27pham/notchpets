@@ -1,0 +1,74 @@
+import SpriteKit
+
+class PetSpriteNode: SKSpriteNode {
+
+    private let totalCols = 6
+    private let totalRows = 10
+    private var framesByState: [AnimationState: [SKTexture]] = [:]
+    private var currentState: AnimationState = .idle
+
+    init(species: String) {
+        let atlas = SKTextureAtlas(named: species)
+        // The atlas contains a single spritesheet image — grab the first texture name
+        let textureNames = atlas.textureNames.sorted()
+        guard let firstName = textureNames.first else {
+            super.init(texture: nil, color: .clear, size: CGSize(width: 32, height: 32))
+            return
+        }
+        let sheetTexture = atlas.textureNamed(firstName)
+        sheetTexture.filteringMode = .nearest
+
+        let frameW = 1.0 / CGFloat(totalCols)
+        let frameH = 1.0 / CGFloat(totalRows)
+
+        // Slice frames for each animation state
+        let manifest = penguinManifest
+        for state in AnimationState.allCases {
+            guard let def = manifest[state] else { continue }
+            var frames: [SKTexture] = []
+            for col in 0..<def.frameCount {
+                let rect = CGRect(
+                    x: CGFloat(col) * frameW,
+                    y: CGFloat(def.row) * frameH,
+                    width: frameW,
+                    height: frameH
+                )
+                let tex = SKTexture(rect: rect, in: sheetTexture)
+                tex.filteringMode = .nearest
+                frames.append(tex)
+            }
+            framesByState[state] = frames
+        }
+
+        // Init with the first idle frame
+        let firstFrame = framesByState[.idle]?.first ?? sheetTexture
+        super.init(texture: firstFrame, color: .clear, size: firstFrame.size())
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setState(_ state: AnimationState, onComplete: (() -> Void)? = nil) {
+        guard let frames = framesByState[state],
+              let def = penguinManifest[state] else { return }
+
+        currentState = state
+        removeAllActions()
+
+        let timePerFrame = 1.0 / Double(def.fps)
+        let animateAction = SKAction.animate(with: frames, timePerFrame: timePerFrame)
+
+        if def.loops {
+            run(SKAction.repeatForever(animateAction), withKey: "animation")
+        } else {
+            run(animateAction) { [weak self] in
+                onComplete?()
+                // Return to idle if this was a one-shot animation
+                if self?.currentState == state {
+                    self?.setState(.idle)
+                }
+            }
+        }
+    }
+}

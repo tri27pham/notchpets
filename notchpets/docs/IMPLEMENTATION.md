@@ -260,12 +260,12 @@ notchpets/
   Views/
     PetSlotView.swift        # Updated: SpriteView when species == "penguin", Image otherwise
   Assets.xcassets/
-    penguin.spriteatlas/     # Spritesheet PNG (192×352px, 11 rows × 6 cols, 32×32 frames)
+    penguin.spriteatlas/     # Spritesheet PNG (192×320px, 10 rows × 6 cols, 32×32 frames)
 ```
 
 ### Spritesheet spec
 
-Single PNG, 11 rows × 6 frames, 32×32px per frame, transparent background. Row order: idle (4f), happy (6f), eating (6f), playing (6f), sleeping (4f), sad (4f), dancing (6f), run (6f), jump (4f), catch (4f), land (4f). Unused cells in shorter rows left transparent.
+Single PNG, 10 rows × 6 frames, 32×32px per frame, transparent background. Row order: idle (4f), happy (6f), eating (6f), playing (6f), sleeping (4f), sad (4f), dancing (6f), run (6f), jump (4f), catch (4f). Unused cells in shorter rows left transparent.
 
 ### Acceptance criteria
 
@@ -281,23 +281,23 @@ Single PNG, 11 rows × 6 frames, 32×32px per frame, transparent background. Row
 Build Stage 3 of notchpets: SpriteKit animation for the penguin only.
 
 Stages 1 and 2 are complete. PetStore and Models exist. The penguin spritesheet PNG
-is in Assets.xcassets/penguin.spriteatlas. It is 192×352px: 11 rows × 6 cols, 32×32px
+is in Assets.xcassets/penguin.spriteatlas. It is 192×320px: 10 rows × 6 cols, 32×32px
 frames, transparent background.
 
 Row order (0-indexed):
 0: idle (4f), 1: happy (6f), 2: eating (6f), 3: playing (6f), 4: sleeping (4f),
-5: sad (4f), 6: dancing (6f), 7: run (6f), 8: jump (4f), 9: catch (4f), 10: land (4f)
+5: sad (4f), 6: dancing (6f), 7: run (6f), 8: jump (4f), 9: catch (4f)
 
 Create notchpets/Pet/AnimationState.swift:
 - Enum AnimationState: String, CaseIterable
-  cases: idle, happy, eating, playing, sleeping, sad, dancing, run, jump, catch_ball, land
+  cases: idle, happy, eating, playing, sleeping, sad, dancing, run, jump, catch_ball
 - Struct AnimationDef: row (Int, 0-indexed), frameCount (Int), fps (Int), loops (Bool)
 - Let penguinManifest: [AnimationState: AnimationDef] hardcoded per above row order
 
 Create notchpets/Pet/PetSpriteNode.swift:
 - Class PetSpriteNode: SKSpriteNode
 - init(): loads SKTextureAtlas(named: "penguin"), slices frames using SKTexture(rect:in:)
-  frameW = 1/6, frameH = 1/11, UV origin bottom-left (rowFromBottom = 10 - row)
+  frameW = 1/6, frameH = 1/10, UV origin bottom-left (rowFromBottom = 9 - row)
 - Set filteringMode = .nearest on all textures
 - func setState(_ state: AnimationState, onComplete: (() -> Void)? = nil):
   builds SKAction.animate(with:timePerFrame:); loops: repeatForever; one-shot: run then onComplete

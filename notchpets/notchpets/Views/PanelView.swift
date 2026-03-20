@@ -44,25 +44,14 @@ struct PanelView: View {
                 .frame(height: metrics.notchHeight)
 
             if state.isExpanded {
-                HStack(spacing: 10) {
-                    PetSlotView(
-                        background: petStore.myPet?.background ?? "japan_background",
-                        species: petStore.myPet?.species ?? "penguin"
+                expandedContent
+                    .padding(.top, 20)
+                    .padding(.bottom, 30)
+                    .frame(height: Constants.OPEN_HEIGHT - metrics.notchHeight)
+                    .transition(
+                        .scale(scale: 0.7, anchor: .top)
+                        .combined(with: .opacity)
                     )
-                    .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
-                    PetSlotView(
-                        background: petStore.partnerPet?.background ?? "bedroom_background",
-                        species: petStore.partnerPet?.species ?? "penguin"
-                    )
-                    .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
-                }
-                .padding(.top, 20)
-                .padding(.bottom, 30)
-                .frame(height: Constants.OPEN_HEIGHT - metrics.notchHeight)
-                .transition(
-                    .scale(scale: 0.7, anchor: .top)
-                    .combined(with: .opacity)
-                )
             }
         }
         .padding(
@@ -85,4 +74,27 @@ struct PanelView: View {
         )
     }
 
+    // MARK: – Expanded content
+
+    private var expandedContent: some View {
+        HStack(spacing: 10) {
+            myPetSlot
+            partnerPetSlot
+        }
+    }
+
+    private var myPetSlot: PetSlotView {
+        PetSlotView(
+            background: petStore.myPet?.background ?? "japan_background",
+            species: petStore.myPet?.species ?? "penguin"
+        )
+    }
+
+    private var partnerPetSlot: some View {
+        PetSlotView(
+            background: petStore.partnerPet?.background ?? "bedroom_background",
+            species: petStore.partnerPet?.species ?? "penguin"
+        )
+        .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+    }
 }

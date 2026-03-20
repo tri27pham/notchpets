@@ -126,8 +126,7 @@ Each species will have a full pixel art spritesheet with the following animation
 - **dancing** — short dance loop, triggered when track changes
 - **run** — legs cycling, used while pet moves horizontally across the panel
 - **jump** — rise → peak → fall arc, used during ball catch approach
-- **catch** — reach/grab moment, plays once on successful catch
-- **land** — impact squash on landing, blends back to idle
+- **catch** — reach/grab/land sequence, plays once on successful catch then returns to idle
 
 #### Pet stats
 
@@ -164,7 +163,7 @@ Either user can throw a ball to either pet. The pet runs across the panel to cat
 | | |
 |---|---|
 | **Trigger** | User taps a throw button in the interaction controls |
-| **Sequence** | idle → run (looping while moving) → jump → catch → land → idle |
+| **Sequence** | idle → run (looping while moving) → jump → catch → idle |
 | **Pet movement** | SpriteKit `SKAction.moveBy` moves the sprite's x position while the run frames cycle |
 | **Ball sprite** | Separate sprite with a short spin animation, travels from one side to the other |
 | **Sync** | Throw action written to Supabase, broadcast via Realtime — both screens see the animation |
