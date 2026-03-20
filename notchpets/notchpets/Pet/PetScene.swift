@@ -30,11 +30,16 @@ class PetScene: SKScene {
         bgNode.zPosition = -1
         addChild(bgNode)
 
+        // Dark tint overlay to make the pet stand out
+        let tint = SKSpriteNode(color: NSColor(white: 0, alpha: 0.4), size: size)
+        tint.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        tint.zPosition = 0
+        addChild(tint)
+
         // Pet sprite
         petNode = PetSpriteNode(species: speciesName)
-        petNode.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        petNode.xScale = 2.0
-        petNode.yScale = -2.0  // Negative to correct flipped texture from SKTexture(rect:in:)
+        petNode.position = CGPoint(x: size.width / 2, y: size.height / 2.5)
+        petNode.setScale(1.5)
         petNode.zPosition = 1
         addChild(petNode)
 

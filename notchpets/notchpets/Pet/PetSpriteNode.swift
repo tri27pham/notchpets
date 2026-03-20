@@ -8,14 +8,8 @@ class PetSpriteNode: SKSpriteNode {
     private var currentState: AnimationState = .idle
 
     init(species: String) {
-        let atlas = SKTextureAtlas(named: species)
-        // The atlas contains a single spritesheet image — grab the first texture name
-        let textureNames = atlas.textureNames.sorted()
-        guard let firstName = textureNames.first else {
-            super.init(texture: nil, color: .clear, size: CGSize(width: 32, height: 32))
-            return
-        }
-        let sheetTexture = atlas.textureNamed(firstName)
+        // Load as a plain texture — NOT an atlas, which would repack and break UV slicing
+        let sheetTexture = SKTexture(imageNamed: "\(species)_spritesheet")
         sheetTexture.filteringMode = .nearest
 
         let frameW = 1.0 / CGFloat(totalCols)
@@ -26,10 +20,11 @@ class PetSpriteNode: SKSpriteNode {
         for state in AnimationState.allCases {
             guard let def = manifest[state] else { continue }
             var frames: [SKTexture] = []
+            let rowFromBottom = (totalRows - 1) - def.row
             for col in 0..<def.frameCount {
                 let rect = CGRect(
                     x: CGFloat(col) * frameW,
-                    y: CGFloat(def.row) * frameH,
+                    y: CGFloat(rowFromBottom) * frameH,
                     width: frameW,
                     height: frameH
                 )
