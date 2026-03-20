@@ -267,25 +267,45 @@ notchpets/
 
 Single PNG, 10 rows × 6 frames, 32×32px per frame, transparent background. Row order: idle (4f), happy (6f), eating (6f), playing (6f), sleeping (4f), sad (4f), dancing (6f), run (6f), jump (4f), catch (4f). Unused cells in shorter rows left transparent.
 
+### Interaction triggers
+
+| Action | Animation | Effect |
+|---|---|---|
+| **Tap pet** | happy | Pet bounces — no stat change |
+| **Double-tap pet** | playing | Pet spins — +25 happiness (capped at 100) |
+| **Feed button** | eating | Pet eats — +30 hunger (capped at 100) |
+| **Idle 5+ minutes** | sleeping | Pet falls asleep — tap to wake |
+| **Hunger < 20** | sad | Pet droops — feed to recover |
+| **Happiness < 20** | sleeping | Pet sleeps — play or tap to recover |
+| **Track changes** | dancing | Pet dances when new music detected (Stage 6) |
+| **Throw ball** | run → jump → catch | Pet chases ball across panel — +10 happiness |
+| **Partner sends message** | happy | Pet bounces when a message arrives (Stage 7) |
+
 ### Acceptance criteria
 
 - [ ] Penguin renders via SpriteKit with idle animation looping
-- [ ] All 11 animation states play correctly when triggered
+- [ ] All 10 animation states play correctly when triggered
 - [ ] Non-looping states (happy, eating, etc.) return to idle on completion
+- [ ] Tap on pet triggers happy animation
+- [ ] Double-tap on pet triggers playing animation and +25 happiness
+- [ ] Feed button triggers eating animation and +30 hunger
+- [ ] Pet auto-transitions to sad when hunger < 20
+- [ ] Pet auto-transitions to sleeping when happiness < 20 or idle 5+ minutes
+- [ ] Tapping a sleeping/sad pet wakes it (returns to idle)
 - [ ] Static image fallback still renders for all other species
 - [ ] No regression to Stage 2 panel layout or expand/collapse behaviour
 
 ### Claude Code prompt
 
 ```
-Build Stage 3 of notchpets: SpriteKit animation for the penguin only.
+Build Stage 3 of notchpets: SpriteKit animation + interactions for the penguin only.
 
 Stages 1 and 2 are complete. PetStore and Models exist. The penguin spritesheet PNG
-is in Assets.xcassets/penguin.spriteatlas. It is 192×320px: 10 rows × 6 cols, 32×32px
-frames, transparent background.
+is in Assets.xcassets as an Image Set named "penguin_spritesheet". It is 384×640px:
+10 rows × 6 cols, 64×64px frames, transparent background.
 
 Row order (0-indexed):
-0: idle (4f), 1: happy (6f), 2: eating (6f), 3: playing (6f), 4: sleeping (4f),
+0: idle (2f), 1: happy (6f), 2: eating (6f), 3: playing (6f), 4: sleeping (4f),
 5: sad (4f), 6: dancing (6f), 7: run (6f), 8: jump (4f), 9: catch (4f)
 
 Create notchpets/Pet/AnimationState.swift:
@@ -296,23 +316,48 @@ Create notchpets/Pet/AnimationState.swift:
 
 Create notchpets/Pet/PetSpriteNode.swift:
 - Class PetSpriteNode: SKSpriteNode
-- init(): loads SKTextureAtlas(named: "penguin"), slices frames using SKTexture(rect:in:)
-  frameW = 1/6, frameH = 1/10, UV origin bottom-left (rowFromBottom = 9 - row)
+- init(species:): loads SKTexture(imageNamed: "\(species)_spritesheet"), slices frames
+  using SKTexture(rect:in:). frameW = 1/6, frameH = 1/10, rowFromBottom = 9 - row
 - Set filteringMode = .nearest on all textures
 - func setState(_ state: AnimationState, onComplete: (() -> Void)? = nil):
   builds SKAction.animate(with:timePerFrame:); loops: repeatForever; one-shot: run then onComplete
 
 Create notchpets/Pet/PetScene.swift:
-- Class PetScene: SKScene, init(size:background:)
-- didMove(to:): fills scene with Image(background) node, adds PetSpriteNode centred, scale 3, starts idle
+- Class PetScene: SKScene, init(size:species:background:)
+- didMove(to:): background image node, dark tint overlay (alpha 0.4), PetSpriteNode centred, starts idle
 - func trigger(_ state: AnimationState): one-shot states return to idle via onComplete;
   looping states (sleeping, sad) set directly
+- Handle touch/click events:
+  - Single tap: trigger(.happy)
+  - Double-tap: trigger(.playing), +25 happiness via PetStore
+  - Tap while sleeping/sad: wake pet, return to idle
+
+Create notchpets/Pet/InteractionBar.swift:
+- SwiftUI View: horizontal row of small icon buttons below the pet slot
+- Feed button (🍔): calls PetStore.feed() → triggers eating animation, +30 hunger
+- Play button (⚽): calls PetStore.play() → triggers playing animation, +25 happiness
+- Styled to fit within the panel — small, dark, unobtrusive
+
+Create notchpets/Pet/PetStatMonitor.swift:
+- Observes PetStore pet stats via Combine
+- When hunger < 20: trigger sad animation
+- When happiness < 20: trigger sleeping animation
+- When idle > 5 minutes: trigger sleeping animation
+- Recovery: when stat rises above 20 and pet is in sad/sleeping, return to idle
+
+Update notchpets/Data/PetStore.swift:
+- Add func feed(): hunger += 30 (capped at 100), save
+- Add func play(): happiness += 25 (capped at 100), save
 
 Update notchpets/Views/PetSlotView.swift:
 - Props: background: String, species: String
-- If species == "penguin": show SpriteView(scene: PetScene(size:background:)) fixed at slot size
+- If species == "penguin": show SpriteView(scene: PetScene) fixed at slot size
 - Otherwise: show existing ZStack Image layout (background + static species image)
 - Hold PetScene in a @StateObject wrapper so it is not recreated on re-render
+
+Update notchpets/Views/PanelView.swift:
+- Add InteractionBar below the left (own) pet slot
+- Wire feed/play buttons to PetStore and PetScene.trigger()
 
 Swift 5.9. SpriteKit only, no additional packages.
 ```

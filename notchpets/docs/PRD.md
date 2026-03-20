@@ -117,16 +117,30 @@ Each species has a single static pixel art image displayed in the panel. No anim
 
 Each species will have a full pixel art spritesheet with the following animation states:
 
-- **idle** — breathing loop, ~2s cycle
-- **happy** — bouncing, triggered by interaction
-- **eating** — nom animation, triggered by feed
-- **playing** — running / spinning, triggered by play
-- **sleeping** — zZz loop, triggered when happiness < 20
-- **sad** — drooping loop, triggered when hunger < 20
-- **dancing** — short dance loop, triggered when track changes
-- **run** — legs cycling, used while pet moves horizontally across the panel
-- **jump** — rise → peak → fall arc, used during ball catch approach
-- **catch** — reach/grab/land sequence, plays once on successful catch then returns to idle
+- **idle** — breathing loop, ~2s cycle. Default state when no interaction is happening.
+- **happy** — bouncing, triggered by tapping/clicking the pet or when a partner message arrives.
+- **eating** — nom animation, triggered by the feed button. Grants +30 hunger.
+- **playing** — running / spinning, triggered by double-tapping the pet or the play button. Grants +25 happiness.
+- **sleeping** — zZz loop, auto-triggered when idle for 5+ minutes or happiness < 20. Tap pet to wake.
+- **sad** — drooping loop, auto-triggered when hunger < 20. Feed to recover.
+- **dancing** — short dance loop, triggered when a new track starts playing (MediaRemote).
+- **run** — legs cycling, used while pet moves horizontally across the panel during ball-catch.
+- **jump** — rise → peak → fall arc, used during ball catch approach.
+- **catch** — reach/grab/land sequence, plays once on successful catch then returns to idle.
+
+#### Interaction triggers
+
+| Action | Animation | Effect |
+|---|---|---|
+| **Tap pet** | happy | Pet bounces — no stat change |
+| **Double-tap pet** | playing | Pet spins — +25 happiness (capped at 100) |
+| **Feed button** | eating | Pet eats — +30 hunger (capped at 100) |
+| **Idle 5+ minutes** | sleeping | Pet falls asleep — tap to wake |
+| **Hunger < 20** | sad | Pet droops — feed to recover |
+| **Happiness < 20** | sleeping | Pet sleeps — play or tap to recover |
+| **Track changes** | dancing | Pet dances when new music detected via MediaRemote |
+| **Throw ball** | run → jump → catch | Pet chases ball across panel — +10 happiness |
+| **Partner sends message** | happy | Pet bounces when a message arrives |
 
 #### Pet stats
 
@@ -134,8 +148,8 @@ Each species will have a full pixel art spritesheet with the following animation
 |---|---|
 | **Hunger** | 0–100. Starts at 100. Decays 5 points per 30 minutes via cron. |
 | **Happiness** | 0–100. Starts at 100. Decays 3 points per 30 minutes via cron. |
-| **Feed action** | +30 hunger (capped at 100). Triggers eating animation on both screens (v2). |
-| **Play action** | +25 happiness (capped at 100). Triggers playing animation on both screens (v2). |
+| **Feed action** | +30 hunger (capped at 100). Triggers eating animation on both screens. |
+| **Play action** | +25 happiness (capped at 100). Triggers playing animation on both screens. |
 | **Notification** | Local push notification when either pet reaches hunger or happiness < 20. |
 | **Cross-interaction** | Either user can feed or play with either pet. |
 
