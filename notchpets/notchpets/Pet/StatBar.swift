@@ -13,7 +13,7 @@ struct StatBar: View {
     let type: StatType
     let value: Int
 
-    private let totalIcons = 8
+    private let totalIcons = 5
 
     private var filledIcons: Int {
         if value <= 0 { return 0 }

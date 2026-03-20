@@ -123,7 +123,7 @@ struct PanelView: View {
                 happiness: petStore.myPet?.happiness ?? 100
             )
         }
-        .overlay(alignment: .bottom) {
+        .overlay(alignment: .trailing) {
             ActionButtonsOverlay(
                 onFeed: {
                     petStore.feed()
@@ -134,6 +134,9 @@ struct PanelView: View {
                     petStore.play()
                     mySceneHolder.scene.trigger(.playing)
                     statMonitor?.recordInteraction()
+                },
+                onThrowBall: {
+                    // TODO: implement throw ball
                 }
             )
         }

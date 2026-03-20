@@ -17,34 +17,36 @@ struct StatBarsOverlay: View {
 struct ActionButtonsOverlay: View {
     let onFeed: () -> Void
     let onPlay: () -> Void
+    let onThrowBall: () -> Void
 
     var body: some View {
-        HStack {
-            Button(action: onFeed) {
-                Image(systemName: "fork.knife")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
-                    .frame(width: 24, height: 24)
-                    .background(Color.white.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .help("Feed your pet (+30 hunger)")
-
-            Spacer()
-
-            Button(action: onPlay) {
-                Image(systemName: "gamecontroller")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
-                    .frame(width: 24, height: 24)
-                    .background(Color.white.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .help("Play with your pet (+25 happiness)")
+        VStack(spacing: 6) {
+            ActionButton(icon: "fork.knife", help: "Feed your pet (+30 hunger)", action: onFeed)
+            ActionButton(icon: "gamecontroller", help: "Play with your pet (+25 happiness)", action: onPlay)
+            ActionButton(icon: "tennisball.fill", help: "Throw ball", action: onThrowBall)
         }
-        .padding(.horizontal, 6)
-        .padding(.bottom, 6)
+        .padding(.trailing, 6)
+        .padding(.vertical, 6)
+    }
+}
+
+private struct ActionButton: View {
+    let icon: String
+    let help: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .medium))
+feat(ui)                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }

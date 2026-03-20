@@ -43,14 +43,14 @@ class PetScene: SKScene {
         addChild(bgNode)
 
         // Dark tint overlay to make the pet stand out
-        let tint = SKSpriteNode(color: NSColor(white: 0, alpha: 0.4), size: size)
+        let tint = SKSpriteNode(color: NSColor(white: 0, alpha: 0.5), size: size)
         tint.position = CGPoint(x: size.width / 2, y: size.height / 2)
         tint.zPosition = 0
         addChild(tint)
 
         // Pet sprite
         let node = PetSpriteNode(species: speciesName)
-        node.position = CGPoint(x: size.width / 2, y: size.height / 2.5)
+        node.position = CGPoint(x: size.width / 2, y: size.height / 3)
         node.setScale(1.5)
         node.zPosition = 1
         addChild(node)
