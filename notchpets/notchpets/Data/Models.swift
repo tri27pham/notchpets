@@ -7,14 +7,18 @@ struct Pet: Codable, Identifiable {
     var background: String
     var hunger: Int
     var happiness: Int
+    var currentMessage: String?
+    var messageSentAt: Date?
 
-    init(id: UUID = UUID(), name: String, species: String, background: String, hunger: Int = 100, happiness: Int = 100) {
+    init(id: UUID = UUID(), name: String, species: String, background: String, hunger: Int = 100, happiness: Int = 100, currentMessage: String? = nil, messageSentAt: Date? = nil) {
         self.id = id
         self.name = name
         self.species = species
         self.background = background
         self.hunger = hunger
         self.happiness = happiness
+        self.currentMessage = currentMessage
+        self.messageSentAt = messageSentAt
     }
 }
 

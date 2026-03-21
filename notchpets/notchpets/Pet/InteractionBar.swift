@@ -18,12 +18,14 @@ struct ActionButtonsOverlay: View {
     let onFeed: () -> Void
     let onPlay: () -> Void
     let onThrowBall: () -> Void
+    let onMessage: () -> Void
 
     var body: some View {
         VStack(spacing: 6) {
             ActionButton(icon: "fork.knife", help: "Feed your pet (+30 hunger)", action: onFeed)
             ActionButton(icon: "gamecontroller", help: "Play with your pet (+25 happiness)", action: onPlay)
             ActionButton(icon: "tennisball.fill", help: "Throw ball", action: onThrowBall)
+            ActionButton(icon: "bubble.left.fill", help: "Send a message", action: onMessage)
         }
         .padding(.trailing, 6)
         .padding(.vertical, 6)
@@ -41,7 +43,10 @@ private struct ActionButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .medium))
-feat(ui)                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .foregroundColor(isHovered ? .white.opacity(0.6) : .white.opacity(0.8))
+                .frame(width: 24, height: 24)
+                .background(isHovered ? Color.black.opacity(0.4) : Color.white.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
         .buttonStyle(.plain)
         .help(help)

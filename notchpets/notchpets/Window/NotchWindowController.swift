@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 final class NotchWindowController: NSWindowController {
@@ -10,6 +11,7 @@ final class NotchWindowController: NSWindowController {
     private var hoverTask: Task<Void, Never>?
     private var closedScreenRect: NSRect = .zero
     private var expandedScreenRect: NSRect = .zero
+    private var keyFocusCancellable: AnyCancellable?
 
     var notchPanel: NotchPanel { window as! NotchPanel }
 
@@ -52,6 +54,7 @@ final class NotchWindowController: NSWindowController {
         }
 
         startMouseMonitoring()
+        observeKeyFocus()
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -60,6 +63,22 @@ final class NotchWindowController: NSWindowController {
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         hoverTask?.cancel()
+    }
+
+    // MARK: – Key focus for text input
+
+    private func observeKeyFocus() {
+        keyFocusCancellable = panelState.$needsKeyFocus
+            .removeDuplicates()
+            .sink { [weak self] needs in
+                guard let self, let panel = self.window as? NotchPanel else { return }
+                panel.allowsKeyFocus = needs
+                if needs {
+                    panel.makeKeyAndOrderFront(nil)
+                } else {
+                    panel.resignKey()
+                }
+            }
     }
 
     // MARK: – Mouse monitoring

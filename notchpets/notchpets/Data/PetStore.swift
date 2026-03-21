@@ -48,6 +48,14 @@ final class PetStore: ObservableObject {
         save(pet)
     }
 
+    func sendMessage(_ text: String) {
+        guard var pet = myPet else { return }
+        let trimmed = String(text.prefix(48))
+        pet.currentMessage = trimmed.isEmpty ? nil : trimmed
+        pet.messageSentAt = trimmed.isEmpty ? nil : Date()
+        save(pet)
+    }
+
     // MARK: - Stat decay
 
     private func startDecayTimer() {

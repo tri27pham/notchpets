@@ -35,7 +35,8 @@ final class NotchPanel: NSPanel {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
 
-    override var canBecomeKey: Bool { false }
+    var allowsKeyFocus: Bool = false
+    override var canBecomeKey: Bool { allowsKeyFocus }
     override var canBecomeMain: Bool { false }
 
     /// Bypass macOS safe-area clamping so the panel can sit above the menu bar.

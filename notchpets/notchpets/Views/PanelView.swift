@@ -1,4 +1,5 @@
 import SwiftUI
+import SpriteKit
 import Combine
 
 struct PanelView: View {
@@ -9,6 +10,8 @@ struct PanelView: View {
     @StateObject private var partnerSceneHolder = PetSceneHolder(species: "penguin", background: "bedroom_background")
     @State private var statMonitor: PetStatMonitor?
     @State private var statCancellable: AnyCancellable?
+    @State private var isComposingMessage = false
+    @State private var messageText = ""
 
     private let openAnimation  = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
     private let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
@@ -73,7 +76,7 @@ struct PanelView: View {
 
             if state.isExpanded {
                 expandedContent
-                    .padding(.top, 20)
+                    .padding(.top, 30)
                     .padding(.bottom, 30)
                     .frame(height: Constants.OPEN_HEIGHT - metrics.notchHeight)
                     .transition(
@@ -100,6 +103,11 @@ struct PanelView: View {
             color: state.isExpanded ? .black.opacity(0.7) : .clear,
             radius: 6
         )
+        .onTapGesture {
+            if isComposingMessage {
+                finishComposing()
+            }
+        }
     }
 
     // MARK: – Expanded content
@@ -115,8 +123,34 @@ struct PanelView: View {
         PetSlotView(
             background: petStore.myPet?.background ?? "japan_background",
             species: petStore.myPet?.species ?? "penguin",
-            sceneHolder: mySceneHolder
+            sceneHolder: mySceneHolder,
+            interactionDisabled: isComposingMessage
         )
+        .overlay(alignment: .top) {
+            if isComposingMessage {
+                EditableSpeechBubbleView(
+                    text: $messageText,
+                    onSend: {
+                        finishComposing()
+                    },
+                    onCancel: {
+                        finishComposing()
+                    }
+                )
+                .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
+                .frame(width: Constants.PET_SLOT_WIDTH / 2, alignment: .center)
+                .padding(.top, 30)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .transition(.scale(scale: 0.8, anchor: .top).combined(with: .opacity))
+            } else if let message = petStore.myPet?.currentMessage,
+                      let sentAt = petStore.myPet?.messageSentAt {
+                SpeechBubbleView(message: message, sentAt: sentAt)
+                    .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
+                    .frame(width: Constants.PET_SLOT_WIDTH / 2, alignment: .center)
+                    .padding(.top, 30)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
         .overlay(alignment: .top) {
             StatBarsOverlay(
                 hunger: petStore.myPet?.hunger ?? 100,
@@ -137,8 +171,33 @@ struct PanelView: View {
                 },
                 onThrowBall: {
                     // TODO: implement throw ball
+                },
+                onMessage: {
+                    startComposing()
                 }
             )
+        }
+    }
+
+    // MARK: – Message composing
+
+    private func startComposing() {
+        messageText = petStore.myPet?.currentMessage ?? ""
+        isComposingMessage = true
+        mySceneHolder.scene.isUserInteractionEnabled = false
+        state.needsKeyFocus = true
+    }
+
+    private func finishComposing() {
+        isComposingMessage = false
+        mySceneHolder.scene.isUserInteractionEnabled = true
+        state.needsKeyFocus = false
+
+        let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            petStore.sendMessage("")
+        } else {
+            petStore.sendMessage(trimmed)
         }
     }
 
