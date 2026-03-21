@@ -3,8 +3,9 @@ import SpriteKit
 import Combine
 
 class PetSceneHolder: ObservableObject {
-    let objectWillChange = ObservableObjectPublisher()
     let scene: PetScene
+    @Published var isAnimating = false
+    @Published var isThrowingBall = false
 
     init(species: String, background: String) {
         scene = PetScene(
@@ -12,5 +13,15 @@ class PetSceneHolder: ObservableObject {
             species: species,
             background: background
         )
+        scene.onAnimationStateChanged = { [weak self] state in
+            DispatchQueue.main.async {
+                self?.isAnimating = state != .idle
+            }
+        }
+        scene.onThrowingBallChanged = { [weak self] throwing in
+            DispatchQueue.main.async {
+                self?.isThrowingBall = throwing
+            }
+        }
     }
 }

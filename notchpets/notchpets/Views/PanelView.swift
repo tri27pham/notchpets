@@ -59,6 +59,8 @@ struct PanelView: View {
                     switch animState {
                     case .playing:
                         petStore.play()
+                    case .catchBall:
+                        petStore.catchBall()
                     default:
                         break
                     }
@@ -142,13 +144,15 @@ struct PanelView: View {
                 .padding(.top, 30)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .transition(.scale(scale: 0.8, anchor: .top).combined(with: .opacity))
-            } else if let message = petStore.myPet?.currentMessage,
+            } else if !mySceneHolder.isThrowingBall,
+                      let message = petStore.myPet?.currentMessage,
                       let sentAt = petStore.myPet?.messageSentAt {
                 SpeechBubbleView(message: message, sentAt: sentAt)
                     .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
                     .frame(width: Constants.PET_SLOT_WIDTH / 2, alignment: .center)
                     .padding(.top, 30)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
             }
         }
         .overlay(alignment: .top) {
@@ -160,21 +164,26 @@ struct PanelView: View {
         .overlay(alignment: .trailing) {
             ActionButtonsOverlay(
                 onFeed: {
+                    mySceneHolder.isAnimating = true
                     petStore.feed()
                     mySceneHolder.scene.trigger(.eating)
                     statMonitor?.recordInteraction()
                 },
                 onPlay: {
+                    mySceneHolder.isAnimating = true
                     petStore.play()
                     mySceneHolder.scene.trigger(.playing)
                     statMonitor?.recordInteraction()
                 },
                 onThrowBall: {
-                    // TODO: implement throw ball
+                    mySceneHolder.isAnimating = true
+                    mySceneHolder.scene.throwBall()
+                    statMonitor?.recordInteraction()
                 },
                 onMessage: {
                     startComposing()
-                }
+                },
+                isAnimating: mySceneHolder.isAnimating
             )
         }
     }

@@ -19,12 +19,13 @@ struct ActionButtonsOverlay: View {
     let onPlay: () -> Void
     let onThrowBall: () -> Void
     let onMessage: () -> Void
+    var isAnimating: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
-            ActionButton(icon: "fork.knife", help: "Feed your pet (+30 hunger)", action: onFeed)
-            ActionButton(icon: "gamecontroller", help: "Play with your pet (+25 happiness)", action: onPlay)
-            ActionButton(icon: "tennisball.fill", help: "Throw ball", action: onThrowBall)
+            ActionButton(icon: "fork.knife", help: "Feed your pet (+30 hunger)", action: onFeed, disabled: isAnimating)
+            ActionButton(icon: "gamecontroller", help: "Play with your pet (+25 happiness)", action: onPlay, disabled: isAnimating)
+            ActionButton(icon: "tennisball.fill", help: "Throw ball", action: onThrowBall, disabled: isAnimating)
             ActionButton(icon: "bubble.left.fill", help: "Send a message", action: onMessage)
         }
         .padding(.trailing, 6)
@@ -36,6 +37,7 @@ private struct ActionButton: View {
     let icon: String
     let help: String
     let action: () -> Void
+    var disabled: Bool = false
 
     @State private var isHovered = false
 
@@ -53,5 +55,7 @@ private struct ActionButton: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .disabled(disabled)
+        .opacity(disabled ? 0.4 : 1.0)
     }
 }

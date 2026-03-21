@@ -57,9 +57,12 @@ class PetSpriteNode: SKSpriteNode {
         if def.loops {
             run(SKAction.repeatForever(animateAction), withKey: "animation")
         } else {
-            run(animateAction) { [weak self] in
+            var sequence: [SKAction] = [animateAction]
+            if def.holdLastFrame > 0 {
+                sequence.append(SKAction.wait(forDuration: def.holdLastFrame))
+            }
+            run(SKAction.sequence(sequence)) { [weak self] in
                 onComplete?()
-                // Return to idle if this was a one-shot animation
                 if self?.currentState == state {
                     self?.setState(.idle)
                 }

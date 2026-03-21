@@ -48,6 +48,12 @@ final class PetStore: ObservableObject {
         save(pet)
     }
 
+    func catchBall() {
+        guard var pet = myPet else { return }
+        pet.happiness = min(100, pet.happiness + 10)
+        save(pet)
+    }
+
     func sendMessage(_ text: String) {
         guard var pet = myPet else { return }
         let trimmed = String(text.prefix(48))
