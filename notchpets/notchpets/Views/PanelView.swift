@@ -185,6 +185,7 @@ struct PanelView: View {
                         .transition(.opacity)
                 }
             }
+            .padding(.top, 30)
         }
         .overlay(alignment: .trailing) {
             ActionButtonsOverlay(

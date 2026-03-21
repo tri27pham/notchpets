@@ -110,10 +110,9 @@ class PetScene: SKScene {
         guard let petNode else { return }
         petNode.setState(state, fallback: defaultState) { [weak self] in
             guard let self, self.currentAnimState == state else { return }
+            self.currentAnimState = self.defaultState
             if wasListening {
                 self.startListening()
-            } else {
-                self.currentAnimState = self.defaultState
             }
         }
     }
