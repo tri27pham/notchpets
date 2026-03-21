@@ -5,12 +5,12 @@ struct StatBarsOverlay: View {
     let happiness: Int
 
     var body: some View {
-        HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 3) {
             StatBar(type: .health, value: happiness)
             StatBar(type: .food, value: hunger)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.leading, 6)
+        .padding(.top, 5)
     }
 }
 
@@ -45,9 +45,9 @@ private struct ActionButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(isHovered ? .white.opacity(0.6) : .white.opacity(0.8))
+                .foregroundColor(isHovered ? .white.opacity(0.8) : .white.opacity(0.6))
                 .frame(width: 24, height: 24)
-                .background(isHovered ? Color.black.opacity(0.4) : Color.white.opacity(0.15))
+                .background(isHovered ? Color.white.opacity(0.15) : Color.black.opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
         .buttonStyle(.plain)

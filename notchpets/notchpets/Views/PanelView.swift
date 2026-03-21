@@ -8,8 +8,10 @@ struct PanelView: View {
     @StateObject private var petStore = PetStore()
     @StateObject private var mySceneHolder = PetSceneHolder(species: "penguin", background: "japan_background")
     @StateObject private var partnerSceneHolder = PetSceneHolder(species: "penguin", background: "bedroom_background")
+    @StateObject private var musicDetector = MusicDetector()
     @State private var statMonitor: PetStatMonitor?
     @State private var statCancellable: AnyCancellable?
+    @State private var musicCancellable: AnyCancellable?
     @State private var isComposingMessage = false
     @State private var messageText = ""
 
@@ -51,6 +53,17 @@ struct PanelView: View {
                     .sink { triggered in
                         guard let triggered else { return }
                         mySceneHolder.scene.trigger(triggered)
+                    }
+
+                // Wire music detector → pet listening (headphones)
+                musicCancellable = musicDetector.$isPlaying
+                    .removeDuplicates()
+                    .sink { playing in
+                        if playing {
+                            mySceneHolder.scene.startListening()
+                        } else {
+                            mySceneHolder.scene.stopListening()
+                        }
                     }
 
                 // Wire pet scene interactions → stat changes
@@ -128,38 +141,50 @@ struct PanelView: View {
             sceneHolder: mySceneHolder,
             interactionDisabled: isComposingMessage
         )
-        .overlay(alignment: .top) {
-            if isComposingMessage {
-                EditableSpeechBubbleView(
-                    text: $messageText,
-                    onSend: {
-                        finishComposing()
-                    },
-                    onCancel: {
-                        finishComposing()
-                    }
-                )
-                .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
-                .frame(width: Constants.PET_SLOT_WIDTH / 2, alignment: .center)
-                .padding(.top, 30)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .transition(.scale(scale: 0.8, anchor: .top).combined(with: .opacity))
-            } else if !mySceneHolder.isThrowingBall,
-                      let message = petStore.myPet?.currentMessage,
-                      let sentAt = petStore.myPet?.messageSentAt {
-                SpeechBubbleView(message: message, sentAt: sentAt)
-                    .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
-                    .frame(width: Constants.PET_SLOT_WIDTH / 2, alignment: .center)
-                    .padding(.top, 30)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .transition(.opacity)
-            }
-        }
-        .overlay(alignment: .top) {
+        .overlay(alignment: .topLeading) {
             StatBarsOverlay(
                 hunger: petStore.myPet?.hunger ?? 100,
                 happiness: petStore.myPet?.happiness ?? 100
             )
+        }
+        .overlay(alignment: .top) {
+            if musicDetector.isPlaying, let track = musicDetector.trackName {
+                HStack {
+                    Spacer()
+                        .frame(width: 90) // approximate stat bars width
+                    Spacer()
+                    NowPlayingOverlay(track: track, artist: musicDetector.artistName, albumArt: musicDetector.albumArt)
+                    Spacer()
+                    Spacer()
+                        .frame(width: 30) // approximate action buttons width
+                }
+                .padding(.top, 5)
+                .transition(.opacity)
+            }
+        }
+        .overlay(alignment: .top) {
+            VStack(spacing: 2) {
+
+                if isComposingMessage {
+                    EditableSpeechBubbleView(
+                        text: $messageText,
+                        onSend: {
+                            finishComposing()
+                        },
+                        onCancel: {
+                            finishComposing()
+                        }
+                    )
+                    .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
+                    .transition(.scale(scale: 0.8, anchor: .top).combined(with: .opacity))
+                } else if !mySceneHolder.isThrowingBall,
+                          let message = petStore.myPet?.currentMessage,
+                          let sentAt = petStore.myPet?.messageSentAt {
+                    SpeechBubbleView(message: message, sentAt: sentAt)
+                        .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
+                        .transition(.opacity)
+                }
+            }
         }
         .overlay(alignment: .trailing) {
             ActionButtonsOverlay(
@@ -172,7 +197,8 @@ struct PanelView: View {
                 onPlay: {
                     mySceneHolder.isAnimating = true
                     petStore.play()
-                    mySceneHolder.scene.trigger(.playing)
+                    let playAnim: AnimationState = Bool.random() ? .playing : .dancing
+                    mySceneHolder.scene.trigger(playAnim)
                     statMonitor?.recordInteraction()
                 },
                 onThrowBall: {
@@ -217,5 +243,44 @@ struct PanelView: View {
             sceneHolder: partnerSceneHolder
         )
         .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+    }
+}
+
+// MARK: - Now Playing overlay
+
+private struct NowPlayingOverlay: View {
+    let track: String
+    let artist: String?
+    let albumArt: NSImage?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if let albumArt {
+                Image(nsImage: albumArt)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 14, height: 14)
+                    .cornerRadius(2)
+            }
+
+            Text(displayText)
+                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                .foregroundColor(.white.opacity(0.9))
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            Capsule()
+                .fill(.black.opacity(0.7))
+        )
+    }
+
+    private var displayText: String {
+        if let artist, !artist.isEmpty {
+            return "\(track) – \(artist)"
+        }
+        return track
     }
 }

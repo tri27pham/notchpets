@@ -181,7 +181,7 @@ private struct WrappingTextField: NSViewRepresentable {
     }
 }
 
-private struct PixelBubble: View {
+struct PixelBubble: View {
     let borderWidth: CGFloat
     let tailSize: CGFloat
     let fillColor: Color

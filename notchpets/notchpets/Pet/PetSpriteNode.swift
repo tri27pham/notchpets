@@ -3,7 +3,7 @@ import SpriteKit
 class PetSpriteNode: SKSpriteNode {
 
     private let totalCols = 6
-    private let totalRows = 10
+    private let totalRows = 11
     private var framesByState: [AnimationState: [SKTexture]] = [:]
     private var currentState: AnimationState = .idle
 
@@ -44,7 +44,7 @@ class PetSpriteNode: SKSpriteNode {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func setState(_ state: AnimationState, onComplete: (() -> Void)? = nil) {
+    func setState(_ state: AnimationState, fallback: AnimationState = .idle, onComplete: (() -> Void)? = nil) {
         guard let frames = framesByState[state],
               let def = penguinManifest[state] else { return }
 
@@ -64,7 +64,7 @@ class PetSpriteNode: SKSpriteNode {
             run(SKAction.sequence(sequence)) { [weak self] in
                 onComplete?()
                 if self?.currentState == state {
-                    self?.setState(.idle)
+                    self?.setState(fallback)
                 }
             }
         }

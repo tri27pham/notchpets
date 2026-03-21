@@ -79,7 +79,8 @@ class PetScene: SKScene {
 
         // Double-click detection
         if now - lastClickTime < doubleClickThreshold {
-            trigger(.playing)
+            let playAnim: AnimationState = Bool.random() ? .playing : .dancing
+            trigger(playAnim)
             onInteraction?(.playing)
             lastClickTime = 0 // reset so triple-click doesn't re-trigger
         } else {
@@ -95,14 +96,54 @@ class PetScene: SKScene {
 
     // MARK: - Animation triggers
 
+    /// The state to return to after a one-shot animation finishes.
+    var defaultState: AnimationState = .idle
+
     func trigger(_ state: AnimationState) {
+        let wasListening = isListening
+        if isListening {
+            isListening = false
+            petNode?.removeAllActions()
+        }
+
         currentAnimState = state
         guard let petNode else { return }
-        petNode.setState(state) { [weak self] in
-            if self?.currentAnimState == state {
-                self?.currentAnimState = .idle
+        petNode.setState(state, fallback: defaultState) { [weak self] in
+            guard let self, self.currentAnimState == state else { return }
+            if wasListening {
+                self.startListening()
+            } else {
+                self.currentAnimState = self.defaultState
             }
         }
+    }
+
+    // MARK: - Music-driven listening
+
+    private(set) var isListening = false {
+        didSet { onListeningChanged?(isListening) }
+    }
+    var onListeningChanged: ((Bool) -> Void)?
+
+    func startListening() {
+        guard !isThrowingBall else { return }
+        guard !isListening else { return }
+        isListening = true
+        defaultState = .headphones
+        // Only switch immediately if idle; otherwise let the current animation
+        // finish and it will return to defaultState (.headphones) on completion.
+        if currentAnimState == .idle {
+            currentAnimState = .headphones
+            petNode?.setState(.headphones)
+        }
+    }
+
+    func stopListening() {
+        guard isListening else { return }
+        isListening = false
+        defaultState = .idle
+        currentAnimState = .idle
+        petNode?.setState(.idle)
     }
 
     // MARK: - Throw ball sequence
@@ -114,7 +155,13 @@ class PetScene: SKScene {
 
     func throwBall() {
         guard let petNode, !isThrowingBall else { return }
+        let wasListening = isListening
+        if isListening {
+            isListening = false
+        }
         isThrowingBall = true
+        currentAnimState = .idle
+        petNode.setState(.idle)
 
         let restPosition = petNode.position
         let ballSize: CGFloat = 20
@@ -250,6 +297,9 @@ class PetScene: SKScene {
                         petNode.setState(.idle)
                         self.isThrowingBall = false
                         self.onInteraction?(.catchBall)
+                        if wasListening {
+                            self.startListening()
+                        }
                     }
                 }
             }
