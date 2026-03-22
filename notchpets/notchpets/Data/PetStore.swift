@@ -62,6 +62,24 @@ final class PetStore: ObservableObject {
         save(pet)
     }
 
+    func updateName(_ name: String) {
+        guard var pet = myPet else { return }
+        pet.name = String(name.prefix(12))
+        save(pet)
+    }
+
+    func updateSpecies(_ species: String) {
+        guard var pet = myPet else { return }
+        pet.species = species
+        save(pet)
+    }
+
+    func updateBackground(_ background: String) {
+        guard var pet = myPet else { return }
+        pet.background = background
+        save(pet)
+    }
+
     // MARK: - Stat decay
 
     private func startDecayTimer() {

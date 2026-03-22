@@ -8,7 +8,8 @@ struct PetSlotView: View {
     var interactionDisabled: Bool = false
 
     var body: some View {
-        if species == "penguin" {
+        // TODO: use penguin spritesheet for all species until individual assets are added
+        if true {
             Group {
                 if interactionDisabled, let snapshot = captureSnapshot() {
                     Image(nsImage: snapshot)

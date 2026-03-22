@@ -3,8 +3,9 @@ import SpriteKit
 class PetScene: SKScene {
 
     private var petNode: PetSpriteNode?
-    private let backgroundName: String
-    private let speciesName: String
+    private var backgroundNode: SKSpriteNode?
+    private var backgroundName: String
+    private var speciesName: String
     private(set) var currentAnimState: AnimationState = .idle {
         didSet { onAnimationStateChanged?(currentAnimState) }
     }
@@ -45,6 +46,7 @@ class PetScene: SKScene {
         bgNode.position = CGPoint(x: size.width / 2, y: size.height / 2)
         bgNode.zPosition = -1
         addChild(bgNode)
+        backgroundNode = bgNode
 
         // Dark tint overlay to make the pet stand out
         let tint = SKSpriteNode(color: NSColor(white: 0, alpha: 0.5), size: size)
@@ -143,6 +145,36 @@ class PetScene: SKScene {
         defaultState = .idle
         currentAnimState = .idle
         petNode?.setState(.idle)
+    }
+
+    // MARK: - Update species / background
+
+    func updateSpecies(_ newSpecies: String) {
+        guard newSpecies != speciesName else { return }
+        speciesName = newSpecies
+        guard let oldNode = petNode else { return }
+        let pos = oldNode.position
+        let scale = oldNode.xScale
+        let zPos = oldNode.zPosition
+        oldNode.removeFromParent()
+
+        let node = PetSpriteNode(species: newSpecies)
+        node.position = pos
+        node.setScale(abs(scale))
+        node.zPosition = zPos
+        addChild(node)
+        petNode = node
+        currentAnimState = .idle
+        node.setState(.idle)
+    }
+
+    func updateBackground(_ newBackground: String) {
+        guard newBackground != backgroundName else { return }
+        backgroundName = newBackground
+        guard let oldBg = backgroundNode else { return }
+        let bgTexture = SKTexture(imageNamed: newBackground)
+        bgTexture.filteringMode = .nearest
+        oldBg.texture = bgTexture
     }
 
     // MARK: - Throw ball sequence

@@ -14,6 +14,7 @@ struct PanelView: View {
     @State private var musicCancellable: AnyCancellable?
     @State private var isComposingMessage = false
     @State private var messageText = ""
+    @State private var showSettings = false
 
     private let openAnimation  = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
     private let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
@@ -80,14 +81,56 @@ struct PanelView: View {
                     statMonitor?.recordInteraction()
                 }
             }
+            .onChange(of: petStore.myPet?.species) { _, newSpecies in
+                if let newSpecies {
+                    mySceneHolder.scene.updateSpecies(newSpecies)
+                }
+            }
+            .onChange(of: petStore.myPet?.background) { _, newBackground in
+                if let newBackground {
+                    mySceneHolder.scene.updateBackground(newBackground)
+                }
+            }
+            .onChange(of: showSettings) { _, isShowing in
+                state.needsKeyFocus = isShowing
+                mySceneHolder.scene.isUserInteractionEnabled = !isShowing
+                partnerSceneHolder.scene.isUserInteractionEnabled = !isShowing
+            }
     }
 
     // MARK: – Notch content
 
     private var notchContent: some View {
         VStack(spacing: 0) {
-            Color.clear
-                .frame(height: metrics.notchHeight)
+            HStack(spacing: 0) {
+                Color.clear
+                    .frame(maxWidth: .infinity)
+
+                Color.clear
+                    .frame(width: metrics.notchWidth)
+
+                HStack {
+                    if state.isExpanded {
+                        Button {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                showSettings.toggle()
+                            }
+                        } label: {
+                            Image(systemName: showSettings ? "xmark" : "gearshape.fill")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.5))
+                                .frame(width: 22, height: 22)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(showSettings ? "Close settings" : "Settings")
+                        .transition(.opacity)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 6)
+            }
+            .frame(height: metrics.notchHeight)
 
             if state.isExpanded {
                 expandedContent
@@ -118,9 +161,12 @@ struct PanelView: View {
             color: state.isExpanded ? .black.opacity(0.7) : .clear,
             radius: 6
         )
-        .onTapGesture {
+        .background {
             if isComposingMessage {
-                finishComposing()
+                Color.black.opacity(0.01)
+                    .onTapGesture {
+                        finishComposing()
+                    }
             }
         }
     }
@@ -128,9 +174,19 @@ struct PanelView: View {
     // MARK: – Expanded content
 
     private var expandedContent: some View {
-        HStack(spacing: 10) {
-            myPetColumn
-            partnerPetSlot
+        Group {
+            if showSettings {
+                SettingsView(petStore: petStore) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        showSettings = false
+                    }
+                }
+            } else {
+                HStack(spacing: 10) {
+                    myPetColumn
+                    partnerPetSlot
+                }
+            }
         }
     }
 
@@ -141,6 +197,7 @@ struct PanelView: View {
             sceneHolder: mySceneHolder,
             interactionDisabled: isComposingMessage
         )
+        .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
         .overlay(alignment: .topLeading) {
             StatBarsOverlay(
                 hunger: petStore.myPet?.hunger ?? 100,
