@@ -5,19 +5,24 @@ import Combine
 struct PanelView: View {
     @ObservedObject var state: PanelState
     let metrics: NotchMetrics
+
     @StateObject private var petStore = PetStore()
+    @StateObject private var authManager = AuthManager()
     @StateObject private var mySceneHolder = PetSceneHolder(species: "penguin", background: "japan_background")
     @StateObject private var partnerSceneHolder = PetSceneHolder(species: "penguin", background: "bedroom_background")
     @StateObject private var musicDetector = MusicDetector()
     @State private var statMonitor: PetStatMonitor?
     @State private var statCancellable: AnyCancellable?
     @State private var musicCancellable: AnyCancellable?
+    @State private var musicTrackCancellable: AnyCancellable?
     @State private var isComposingMessage = false
     @State private var messageText = ""
     @State private var showSettings = false
 
     private let openAnimation  = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
     private let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
+
+    private var isPaired: Bool { petStore.partnerPet != nil }
 
     // MARK: – Corner radii (animate with the shape)
 
@@ -67,6 +72,16 @@ struct PanelView: View {
                         }
                     }
 
+                // Wire music detector → Supabase track sync
+                musicTrackCancellable = Publishers.CombineLatest(
+                    musicDetector.$trackName,
+                    musicDetector.$artistName
+                )
+                .debounce(for: .seconds(1), scheduler: RunLoop.main)
+                .sink { track, artist in
+                    petStore.updateNowPlaying(track: track, artist: artist)
+                }
+
                 // Wire pet scene interactions → stat changes
                 mySceneHolder.scene.onInteraction = { [weak petStore] animState in
                     guard let petStore else { return }
@@ -81,6 +96,9 @@ struct PanelView: View {
                     statMonitor?.recordInteraction()
                 }
             }
+            .onDisappear {
+                petStore.disconnect()
+            }
             .onChange(of: petStore.myPet?.species) { _, newSpecies in
                 if let newSpecies {
                     mySceneHolder.scene.updateSpecies(newSpecies)
@@ -89,6 +107,16 @@ struct PanelView: View {
             .onChange(of: petStore.myPet?.background) { _, newBackground in
                 if let newBackground {
                     mySceneHolder.scene.updateBackground(newBackground)
+                }
+            }
+            .onChange(of: petStore.partnerPet?.species) { _, newSpecies in
+                if let newSpecies {
+                    partnerSceneHolder.scene.updateSpecies(newSpecies)
+                }
+            }
+            .onChange(of: petStore.partnerPet?.background) { _, newBackground in
+                if let newBackground {
+                    partnerSceneHolder.scene.updateBackground(newBackground)
                 }
             }
             .onChange(of: showSettings) { _, isShowing in
@@ -150,7 +178,6 @@ struct PanelView: View {
         .frame(width: state.isExpanded ? Constants.OPEN_WIDTH : metrics.notchWidth)
         .background(.black)
         .clipShape(currentShape)
-        // 1-pixel black bar fills the gap between the shape's inner corner curves and the screen edge.
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(.black)
@@ -176,7 +203,7 @@ struct PanelView: View {
     private var expandedContent: some View {
         Group {
             if showSettings {
-                SettingsView(petStore: petStore) {
+                SettingsView(petStore: petStore, authManager: authManager) {
                     withAnimation(.easeOut(duration: 0.2)) {
                         showSettings = false
                     }
@@ -184,7 +211,9 @@ struct PanelView: View {
             } else {
                 HStack(spacing: 10) {
                     myPetColumn
-                    partnerPetSlot
+                    if isPaired {
+                        partnerPetSlot
+                    }
                 }
             }
         }
@@ -208,12 +237,12 @@ struct PanelView: View {
             if musicDetector.isPlaying, let track = musicDetector.trackName {
                 HStack {
                     Spacer()
-                        .frame(width: 90) // approximate stat bars width
+                        .frame(width: 90)
                     Spacer()
                     NowPlayingOverlay(track: track, artist: musicDetector.artistName, albumArt: musicDetector.albumArt)
                     Spacer()
                     Spacer()
-                        .frame(width: 30) // approximate action buttons width
+                        .frame(width: 30)
                 }
                 .padding(.top, 5)
                 .transition(.opacity)
@@ -295,11 +324,54 @@ struct PanelView: View {
     }
 
     private var partnerPetSlot: some View {
-        PetSlotView(
-            background: petStore.partnerPet?.background ?? "bedroom_background",
-            species: petStore.partnerPet?.species ?? "penguin",
-            sceneHolder: partnerSceneHolder
-        )
+        ZStack {
+            PetSlotView(
+                background: petStore.partnerPet?.background ?? "bedroom_background",
+                species: petStore.partnerPet?.species ?? "penguin",
+                sceneHolder: partnerSceneHolder
+            )
+            .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+
+            // Partner's speech bubble
+            if let message = petStore.partnerPet?.currentMessage,
+               let sentAt = petStore.partnerPet?.messageSentAt {
+                VStack {
+                    SpeechBubbleView(message: message, sentAt: sentAt)
+                        .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
+                    Spacer()
+                }
+                .padding(.top, 30)
+            }
+
+            // Partner's now-playing bubble
+            if let track = petStore.partnerPet?.currentTrackName {
+                VStack {
+                    HStack {
+                        Spacer()
+                        NowPlayingOverlay(
+                            track: track,
+                            artist: petStore.partnerPet?.currentTrackArtist,
+                            albumArt: nil
+                        )
+                        Spacer()
+                    }
+                    .padding(.top, 5)
+                    Spacer()
+                }
+            }
+
+            // Partner stat bars
+            VStack {
+                HStack {
+                    StatBarsOverlay(
+                        hunger: petStore.partnerPet?.hunger ?? 100,
+                        happiness: petStore.partnerPet?.happiness ?? 100
+                    )
+                    Spacer()
+                }
+                Spacer()
+            }
+        }
         .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
     }
 }
