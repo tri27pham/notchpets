@@ -10,8 +10,8 @@ struct SettingsView: View {
     @FocusState private var nameFieldFocused: Bool
     @FocusState private var userNameFieldFocused: Bool
 
-    private let labelColor = Color.white.opacity(0.5)
-    private let rowFont = Font.system(size: 10, weight: .medium, design: .monospaced)
+    private let labelColor = Color.white.opacity(0.4)
+    private let rowFont = Font.system(size: 10, weight: .semibold, design: .monospaced)
     private let labelWidth: CGFloat = 75
     private let rowHeight: CGFloat = 24
 
@@ -119,10 +119,10 @@ struct SettingsView: View {
                     .padding(.horizontal, 6)
                     .frame(height: rowHeight)
                     .background(Color.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 2)
                     )
 
                 if editingUserName != petStore.userName {
@@ -132,7 +132,7 @@ struct SettingsView: View {
                             .foregroundColor(.green)
                             .frame(width: 20, height: 20)
                             .background(Color.green.opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .transition(.scale.combined(with: .opacity))
@@ -172,10 +172,10 @@ struct SettingsView: View {
                     .padding(.horizontal, 6)
                     .frame(height: rowHeight)
                     .background(Color.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 2)
                     )
 
                 if editingName != (petStore.myPet?.name ?? "") {
@@ -185,7 +185,7 @@ struct SettingsView: View {
                             .foregroundColor(.green)
                             .frame(width: 20, height: 20)
                             .background(Color.green.opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .transition(.scale.combined(with: .opacity))
@@ -216,7 +216,7 @@ struct SettingsView: View {
 
             ArrowPicker(
                 label: allSpecies[currentIndex].rawValue.capitalized,
-                icon: allSpecies[currentIndex].emoji,
+                spriteAsset: "\(allSpecies[currentIndex].rawValue)_spritesheet",
                 onPrevious: {
                     let prev = (currentIndex - 1 + allSpecies.count) % allSpecies.count
                     petStore.updateSpecies(allSpecies[prev].rawValue)
@@ -288,10 +288,10 @@ private struct ConnectButton: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
                         .background(Color.white.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 2)
                         )
                         .onSubmit { sendLink() }
 
@@ -310,7 +310,7 @@ private struct ConnectButton: View {
                     }
                     .buttonStyle(.plain)
                     .background(Color.white.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                     .disabled(email.isEmpty || isSending)
                 }
             }
@@ -387,10 +387,10 @@ private struct PairInlineView: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
                     .background(Color.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 2)
                     )
                     .frame(maxWidth: 80)
                     .onChange(of: inputCode) {
@@ -411,7 +411,7 @@ private struct PairInlineView: View {
                 }
                 .buttonStyle(.plain)
                 .background(Color.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                 .disabled(inputCode.count < 6 || isLoading)
 
                 if let errorMessage {
@@ -438,7 +438,7 @@ private struct PairInlineView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -503,12 +503,12 @@ private struct ConnectedView: View {
             .padding(.horizontal, 6)
             .frame(height: 24)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(isHovered ? Color.red.opacity(0.5) : Color.green.opacity(0.12))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(isHovered ? Color.red.opacity(0.6) : Color.green.opacity(0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .stroke(isHovered ? Color.red.opacity(0.6) : Color.green.opacity(0.3), lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
@@ -546,7 +546,7 @@ private struct HoverIconButton: View {
                 .foregroundColor(isActive ? (activeColor ?? .green) : (isHovered ? .white.opacity(0.8) : .white.opacity(0.4)))
                 .frame(width: 22, height: 22)
                 .background(isHovered ? Color.white.opacity(0.15) : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
@@ -574,11 +574,36 @@ private struct CopyButton: View {
     }
 }
 
+// MARK: - Sprite frame view
+
+private struct SpriteFrameView: View {
+    let asset: String
+    let cols: Int
+    let rows: Int
+
+    var body: some View {
+        if let nsImage = NSImage(named: asset) {
+            let frameW = nsImage.size.width / CGFloat(cols)
+            let frameH = nsImage.size.height / CGFloat(rows)
+            let cropRect = CGRect(x: 0, y: nsImage.size.height - frameH, width: frameW, height: frameH)
+
+            if let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil),
+               let cropped = cgImage.cropping(to: cropRect) {
+                Image(nsImage: NSImage(cgImage: cropped, size: NSSize(width: frameW, height: frameH)))
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+    }
+}
+
 // MARK: - Arrow picker
 
 private struct ArrowPicker: View {
     let label: String
     var icon: String? = nil
+    var spriteAsset: String? = nil
     var backgroundAsset: String? = nil
     let onPrevious: () -> Void
     let onNext: () -> Void
@@ -588,7 +613,10 @@ private struct ArrowPicker: View {
             ArrowButton(direction: .left, action: onPrevious)
 
             HStack(spacing: 5) {
-                if let icon {
+                if let spriteAsset {
+                    SpriteFrameView(asset: spriteAsset, cols: 6, rows: 11)
+                        .frame(width: 16, height: 16)
+                } else if let icon {
                     Text(icon)
                         .font(.system(size: 12))
                 }
@@ -616,10 +644,10 @@ private struct ArrowPicker: View {
                 Color.white.opacity(0.08)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .stroke(Color.white.opacity(0.2), lineWidth: 2)
         )
     }
 }
@@ -633,14 +661,17 @@ private struct ArrowButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: direction == .left ? "chevron.left" : "chevron.right")
-                .font(.system(size: 9, weight: .semibold))
+            Text(direction == .left ? "<" : ">")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundColor(isHovered ? .white.opacity(0.8) : .white.opacity(0.4))
                 .frame(width: 24, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
+        .onHover { hovering in
+            isHovered = hovering
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
     }
 }
 
