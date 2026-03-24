@@ -159,6 +159,32 @@ class PetScene: SKScene {
         petNode?.setState(.idle)
     }
 
+    // MARK: - Reset (cancel all animations, reposition)
+
+    func resetToIdle() {
+        // Remove extra nodes (ball, etc.) — iterate a snapshot of children
+        for node in children where node !== petNode && node !== backgroundNode && node !== tintNode {
+            node.removeAllActions()
+            node.removeFromParent()
+        }
+
+        // Cancel all pet actions (walk, throw sequence, etc.)
+        petNode?.removeAllActions()
+
+        // Reset state flags
+        isThrowingBall = false
+        isListening = false
+        defaultState = .idle
+        currentAnimState = .idle
+
+        // Reposition pet to center
+        petNode?.position = CGPoint(x: size.width / 2, y: size.height / 3)
+        petNode?.xScale = abs(petNode?.xScale ?? 1.5)
+
+        // Restart idle animation
+        petNode?.setState(.idle)
+    }
+
     // MARK: - Update species / background
 
     func updateSpecies(_ newSpecies: String) {
@@ -300,7 +326,7 @@ class PetScene: SKScene {
 
         // Execute: ball flies + bounces, then pet walks over
         ball.run(fullBallAction) { [weak self] in
-            guard let self, let petNode = self.petNode else { return }
+            guard let self, self.isThrowingBall, let petNode = self.petNode else { return }
 
             // Pet walks to ball
             self.currentAnimState = .run
@@ -309,14 +335,14 @@ class PetScene: SKScene {
             walkTo.timingMode = .easeInEaseOut
 
             petNode.run(walkTo) { [weak self] in
-                guard let self, let petNode = self.petNode else { return }
+                guard let self, self.isThrowingBall, let petNode = self.petNode else { return }
 
                 // Pick up ball
                 ball.removeAllActions()
                 ball.removeFromParent()
                 self.currentAnimState = .catchBall
                 petNode.setState(.catchBall) { [weak self] in
-                    guard let self, let petNode = self.petNode else { return }
+                    guard let self, self.isThrowingBall, let petNode = self.petNode else { return }
 
                     // Flip to face back toward center
                     let goingLeft = restPosition.x < ballRestX
@@ -334,7 +360,7 @@ class PetScene: SKScene {
                     walkBack.timingMode = .easeInEaseOut
 
                     petNode.run(walkBack) { [weak self] in
-                        guard let self, let petNode = self.petNode else { return }
+                        guard let self, self.isThrowingBall, let petNode = self.petNode else { return }
                         petNode.xScale = abs(petNode.xScale)
                         self.currentAnimState = .idle
                         petNode.setState(.idle)

@@ -120,6 +120,14 @@ struct PanelView: View {
                     partnerSceneHolder.scene.updateBackground(newBackground)
                 }
             }
+            .onChange(of: petStore.partnerPet?.id) { oldId, newId in
+                // Pairing status changed — cancel animations and reset positioning
+                let wasPaired = oldId != nil
+                let nowPaired = newId != nil
+                guard wasPaired != nowPaired else { return }
+                mySceneHolder.scene.resetToIdle()
+                partnerSceneHolder.scene.resetToIdle()
+            }
             .onChange(of: showSettings) { _, isShowing in
                 state.needsKeyFocus = isShowing
                 mySceneHolder.scene.isUserInteractionEnabled = !isShowing
