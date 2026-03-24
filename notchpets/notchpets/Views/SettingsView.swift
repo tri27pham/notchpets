@@ -19,6 +19,9 @@ struct SettingsView: View {
             backgroundPicker
             Spacer().frame(height: 2)
             connectSection
+            #if DEBUG
+            debugSection
+            #endif
         }
         .frame(width: 300)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -59,6 +62,33 @@ struct SettingsView: View {
             }
         }
     }
+
+    #if DEBUG
+    private var debugSection: some View {
+        HStack(spacing: 8) {
+            Text("Debug")
+                .font(rowFont)
+                .foregroundColor(labelColor)
+                .frame(width: labelWidth, alignment: .trailing)
+
+            if petStore.partnerPet != nil {
+                Button("Remove mock partner") {
+                    petStore.unmockPartner()
+                }
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundColor(.red.opacity(0.7))
+                .buttonStyle(.plain)
+            } else {
+                Button("Add mock partner") {
+                    petStore.mockPartner()
+                }
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundColor(.blue.opacity(0.8))
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    #endif
 
     // MARK: - Name
 

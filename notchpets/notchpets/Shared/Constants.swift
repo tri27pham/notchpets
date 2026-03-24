@@ -13,6 +13,7 @@ enum Constants {
     )
 
     static let PET_SLOT_WIDTH: CGFloat = 275
+    static let PET_SLOT_SOLO_WIDTH: CGFloat = 560
     static let PET_SLOT_HEIGHT: CGFloat = 130
     static let COLLAPSE_DEBOUNCE_SECONDS: Double = 0.3
 }

@@ -23,6 +23,7 @@ struct PanelView: View {
     private let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
 
     private var isPaired: Bool { petStore.partnerPet != nil }
+    private var petSlotWidth: CGFloat { isPaired ? Constants.PET_SLOT_WIDTH : Constants.PET_SLOT_SOLO_WIDTH }
 
     // MARK: – Corner radii (animate with the shape)
 
@@ -226,7 +227,7 @@ struct PanelView: View {
             sceneHolder: mySceneHolder,
             interactionDisabled: isComposingMessage
         )
-        .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+        .frame(width: petSlotWidth, height: Constants.PET_SLOT_HEIGHT)
         .overlay(alignment: .topLeading) {
             StatBarsOverlay(
                 hunger: petStore.myPet?.hunger ?? 100,
@@ -261,13 +262,13 @@ struct PanelView: View {
                             finishComposing()
                         }
                     )
-                    .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
+                    .frame(maxWidth: petSlotWidth / 3)
                     .transition(.scale(scale: 0.8, anchor: .top).combined(with: .opacity))
                 } else if !mySceneHolder.isThrowingBall,
                           let message = petStore.myPet?.currentMessage,
                           let sentAt = petStore.myPet?.messageSentAt {
                     SpeechBubbleView(message: message, sentAt: sentAt)
-                        .frame(maxWidth: Constants.PET_SLOT_WIDTH / 3)
+                        .frame(maxWidth: petSlotWidth / 3)
                         .transition(.opacity)
                 }
             }

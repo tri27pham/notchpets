@@ -8,30 +8,26 @@ struct PetSlotView: View {
     var interactionDisabled: Bool = false
 
     var body: some View {
-        // TODO: use penguin spritesheet for all species until individual assets are added
-        if true {
+        GeometryReader { geo in
             Group {
-                if interactionDisabled, let snapshot = captureSnapshot() {
+                if interactionDisabled, let snapshot = captureSnapshot(size: geo.size) {
                     Image(nsImage: snapshot)
                         .resizable()
-                        .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+                        .frame(width: geo.size.width, height: geo.size.height)
                 } else {
                     SpriteView(scene: sceneHolder.scene, options: [.allowsTransparency])
-                        .frame(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
+                        .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        } else {
-            staticPetView
         }
     }
 
-    private func captureSnapshot() -> NSImage? {
+    private func captureSnapshot(size: CGSize) -> NSImage? {
         guard let view = sceneHolder.scene.view,
               let texture = view.texture(from: sceneHolder.scene) else { return nil }
         let cgImage = texture.cgImage()
-        let size = NSSize(width: Constants.PET_SLOT_WIDTH, height: Constants.PET_SLOT_HEIGHT)
-        return NSImage(cgImage: cgImage, size: size)
+        return NSImage(cgImage: cgImage, size: NSSize(width: size.width, height: size.height))
     }
 
     private var staticPetView: some View {

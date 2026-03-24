@@ -208,6 +208,28 @@ final class PetStore: ObservableObject {
         save(pet)
     }
 
+    // MARK: - Debug mock
+
+    #if DEBUG
+    func mockPartner() {
+        partnerPet = Pet(
+            name: "Mochi",
+            species: "cat",
+            background: "cafe_background",
+            hunger: 72,
+            happiness: 85,
+            currentMessage: "miss u",
+            messageSentAt: Date(),
+            currentTrackName: "Glimpse of Us",
+            currentTrackArtist: "Joji"
+        )
+    }
+
+    func unmockPartner() {
+        partnerPet = nil
+    }
+    #endif
+
     // MARK: - Push to Supabase
 
     private func pushUpdate(_ pet: Pet) {

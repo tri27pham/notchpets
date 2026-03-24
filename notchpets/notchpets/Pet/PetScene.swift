@@ -4,6 +4,7 @@ class PetScene: SKScene {
 
     private var petNode: PetSpriteNode?
     private var backgroundNode: SKSpriteNode?
+    private var tintNode: SKSpriteNode?
     private var backgroundName: String
     private var speciesName: String
     private(set) var currentAnimState: AnimationState = .idle {
@@ -22,7 +23,7 @@ class PetScene: SKScene {
         self.speciesName = species
         self.backgroundName = background
         super.init(size: size)
-        scaleMode = .aspectFill
+        scaleMode = .resizeFill
         isUserInteractionEnabled = true
     }
 
@@ -53,6 +54,7 @@ class PetScene: SKScene {
         tint.position = CGPoint(x: size.width / 2, y: size.height / 2)
         tint.zPosition = 0
         addChild(tint)
+        tintNode = tint
 
         // Pet sprite
         let node = PetSpriteNode(species: speciesName)
@@ -63,6 +65,16 @@ class PetScene: SKScene {
         petNode = node
 
         node.setState(.idle)
+    }
+
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        backgroundNode?.size = size
+        backgroundNode?.position = center
+        tintNode?.size = size
+        tintNode?.position = center
+        petNode?.position = CGPoint(x: size.width / 2, y: size.height / 3)
     }
 
     // MARK: - Click handling
