@@ -152,6 +152,13 @@ struct PanelView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .onHover { hovering in
+                            if hovering {
+                                NSCursor.pointingHand.push()
+                            } else {
+                                NSCursor.pop()
+                            }
+                        }
                         .help(showSettings ? "Close settings" : "Settings")
                         .transition(.opacity)
                     }
@@ -228,25 +235,33 @@ struct PanelView: View {
             interactionDisabled: isComposingMessage
         )
         .frame(width: petSlotWidth, height: Constants.PET_SLOT_HEIGHT)
-        .overlay(alignment: .topLeading) {
+        .overlay(alignment: isPaired ? .topLeading : .top) {
             StatBarsOverlay(
                 hunger: petStore.myPet?.hunger ?? 100,
-                happiness: petStore.myPet?.happiness ?? 100
+                happiness: petStore.myPet?.happiness ?? 100,
+                horizontal: !isPaired
             )
         }
-        .overlay(alignment: .top) {
+        .overlay(alignment: isPaired ? .top : .topLeading) {
             if musicDetector.isPlaying, let track = musicDetector.trackName {
-                HStack {
-                    Spacer()
-                        .frame(width: 90)
-                    Spacer()
+                if isPaired {
+                    HStack {
+                        Spacer()
+                            .frame(width: 90)
+                        Spacer()
+                        NowPlayingOverlay(track: track, artist: musicDetector.artistName, albumArt: musicDetector.albumArt)
+                        Spacer()
+                        Spacer()
+                            .frame(width: 30)
+                    }
+                    .padding(.top, 5)
+                    .transition(.opacity)
+                } else {
                     NowPlayingOverlay(track: track, artist: musicDetector.artistName, albumArt: musicDetector.albumArt)
-                    Spacer()
-                    Spacer()
-                        .frame(width: 30)
+                        .padding(.top, 5)
+                        .padding(.leading, 6)
+                        .transition(.opacity)
                 }
-                .padding(.top, 5)
-                .transition(.opacity)
             }
         }
         .overlay(alignment: .top) {

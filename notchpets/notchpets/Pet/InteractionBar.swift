@@ -3,14 +3,23 @@ import SwiftUI
 struct StatBarsOverlay: View {
     let hunger: Int
     let happiness: Int
+    var horizontal: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            StatBar(type: .health, value: happiness)
-            StatBar(type: .food, value: hunger)
+        if horizontal {
+            HStack(spacing: 8) {
+                StatBar(type: .health, value: happiness)
+                StatBar(type: .food, value: hunger)
+            }
+            .padding(.top, 5)
+        } else {
+            VStack(alignment: .leading, spacing: 3) {
+                StatBar(type: .health, value: happiness)
+                StatBar(type: .food, value: hunger)
+            }
+            .padding(.leading, 6)
+            .padding(.top, 5)
         }
-        .padding(.leading, 6)
-        .padding(.top, 5)
     }
 }
 
@@ -54,6 +63,11 @@ private struct ActionButton: View {
         .help(help)
         .onHover { hovering in
             isHovered = hovering
+            if hovering && !disabled {
+                NSCursor.pointingHand.push()
+            } else {
+                NSCursor.pop()
+            }
         }
         .disabled(disabled)
         .opacity(disabled ? 0.4 : 1.0)

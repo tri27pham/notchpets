@@ -51,27 +51,20 @@ struct SettingsView: View {
                 .foregroundColor(labelColor)
                 .frame(width: labelWidth, alignment: .trailing)
 
-            if let partner = petStore.partnerPet {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(partner.name.isEmpty ? "Connected" : "Connected with \(partner.name)")
-                        .font(rowFont)
-                        .foregroundColor(.green.opacity(0.8))
-
-                    Button {
+            Group {
+                if let partner = petStore.partnerPet {
+                    ConnectedView(partnerName: partner.name) {
                         petStore.disconnect()
                         Task { await authManager.signOut() }
-                    } label: {
-                        Text("Disconnect")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundColor(.red.opacity(0.7))
                     }
-                    .buttonStyle(.plain)
+                } else if authManager.isSignedIn {
+                    PairInlineView(authManager: authManager, petStore: petStore)
+                } else {
+                    ProgressView()
+                        .scaleEffect(0.4)
                 }
-            } else if !authManager.isSignedIn {
-                ConnectButton(authManager: authManager)
-            } else {
-                PairInlineView(authManager: authManager, petStore: petStore)
             }
+            .frame(width: 260 - labelWidth - 8, alignment: .leading)
         }
     }
 
@@ -360,81 +353,81 @@ private struct PairInlineView: View {
     enum Mode { case choose, create, join }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 6) {
             switch mode {
             case .choose:
-                HStack(spacing: 6) {
-                    smallButton("Create code") { mode = .create; generateCode() }
-                    smallButton("Enter code") { mode = .join }
-                }
+                smallButton("Create code") { mode = .create; generateCode() }
+                smallButton("Enter code") { mode = .join }
             case .create:
+                backButton
+                Spacer()
                 if let invite {
-                    HStack(spacing: 4) {
-                        Text(invite.code)
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
-                            .textSelection(.enabled)
-
-                        Text("share this")
-                            .font(.system(size: 8, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.4))
-                    }
+                    Text(invite.code)
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
+                        .textSelection(.enabled)
+                    Spacer()
+                    CopyButton(text: invite.code)
                 } else if isLoading {
                     ProgressView().scaleEffect(0.4)
+                    Spacer()
                 }
-                backButton
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(.red.opacity(0.8))
+                }
             case .join:
-                HStack(spacing: 4) {
-                    TextField("Code", text: $inputCode)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                        )
-                        .frame(maxWidth: 80)
-                        .onChange(of: inputCode) {
-                            inputCode = String(inputCode.prefix(6)).uppercased()
-                        }
-                        .onSubmit { acceptCode() }
-
-                    Button(action: acceptCode) {
-                        if isLoading {
-                            ProgressView().scaleEffect(0.4).frame(width: 30, height: 22)
-                        } else {
-                            Text("Join")
-                                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                .foregroundColor(.white)
-                                .frame(height: 22)
-                                .padding(.horizontal, 6)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .background(Color.white.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .disabled(inputCode.count < 6 || isLoading)
-                }
                 backButton
-            }
+                TextField("Code", text: $inputCode)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+                    .frame(maxWidth: 80)
+                    .onChange(of: inputCode) {
+                        inputCode = String(inputCode.prefix(6)).uppercased()
+                    }
+                    .onSubmit { acceptCode() }
 
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.system(size: 8, design: .monospaced))
-                    .foregroundColor(.red.opacity(0.8))
+                Button(action: acceptCode) {
+                    if isLoading {
+                        ProgressView().scaleEffect(0.4).frame(width: 30, height: 22)
+                    } else {
+                        Text("Join")
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundColor(.white)
+                            .frame(height: 22)
+                            .padding(.horizontal, 6)
+                    }
+                }
+                .buttonStyle(.plain)
+                .background(Color.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .disabled(inputCode.count < 6 || isLoading)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(.red.opacity(0.8))
+                }
             }
         }
     }
 
+    @ViewBuilder
     private var backButton: some View {
-        Button("Back") { mode = .choose; invite = nil; errorMessage = nil }
-            .font(.system(size: 8, design: .monospaced))
-            .foregroundColor(.white.opacity(0.4))
-            .buttonStyle(.plain)
+        HoverIconButton(icon: "chevron.left") {
+            mode = .choose; invite = nil; errorMessage = nil
+        }
     }
 
     private func smallButton(_ title: String, action: @escaping () -> Void) -> some View {
@@ -448,6 +441,9 @@ private struct PairInlineView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
     }
 
     private func generateCode() {
@@ -476,6 +472,104 @@ private struct PairInlineView: View {
                 errorMessage = error.localizedDescription
             }
             isLoading = false
+        }
+    }
+}
+
+// MARK: - Connected view
+
+private struct ConnectedView: View {
+    let partnerName: String
+    let onDisconnect: () -> Void
+
+    @State private var isHovered = false
+
+    private let font = Font.system(size: 9, weight: .medium, design: .monospaced)
+
+    var body: some View {
+        Button(action: { if isHovered { onDisconnect() } }) {
+            ZStack {
+                Text(partnerName.isEmpty ? "Connected" : "Connected with \(partnerName)")
+                    .font(font)
+                    .foregroundColor(.green.opacity(0.9))
+                    .opacity(isHovered ? 0 : 1)
+
+                Text("Disconnect")
+                    .font(font)
+                    .foregroundColor(.white)
+                    .opacity(isHovered ? 1 : 0)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 6)
+            .frame(height: 24)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isHovered ? Color.red.opacity(0.5) : Color.green.opacity(0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(isHovered ? Color.red.opacity(0.6) : Color.green.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+    }
+}
+
+// MARK: - Hover icon button
+
+private struct HoverIconButton: View {
+    let icon: String
+    var activeIcon: String? = nil
+    var activeColor: Color? = nil
+    let action: () -> Void
+
+    @State private var isHovered = false
+    @State private var isActive = false
+
+    var body: some View {
+        Button {
+            action()
+            if let activeIcon {
+                withAnimation(.easeOut(duration: 0.15)) { isActive = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation(.easeOut(duration: 0.15)) { isActive = false }
+                }
+            }
+        } label: {
+            Image(systemName: isActive ? (activeIcon ?? icon) : icon)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(isActive ? (activeColor ?? .green) : (isHovered ? .white.opacity(0.8) : .white.opacity(0.4)))
+                .frame(width: 22, height: 22)
+                .background(isHovered ? Color.white.opacity(0.15) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+            if hovering {
+                NSCursor.pointingHand.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+    }
+}
+
+// MARK: - Copy button
+
+private struct CopyButton: View {
+    let text: String
+
+    var body: some View {
+        HoverIconButton(icon: "doc.on.doc", activeIcon: "checkmark", activeColor: .green) {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
         }
     }
 }

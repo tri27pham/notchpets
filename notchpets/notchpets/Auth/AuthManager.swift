@@ -29,8 +29,13 @@ final class AuthManager: ObservableObject {
         do {
             session = try await client.auth.session
         } catch {
-            print("[AuthManager] No existing session: \(error.localizedDescription)")
-            session = nil
+            // No existing session — sign in anonymously
+            do {
+                session = try await client.auth.signInAnonymously()
+            } catch {
+                print("[AuthManager] Anonymous sign-in failed: \(error.localizedDescription)")
+                session = nil
+            }
         }
         isLoading = false
     }

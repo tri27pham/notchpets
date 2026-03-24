@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import Auth
 
 @MainActor
 final class SupabaseManager {
@@ -22,8 +23,29 @@ final class SupabaseManager {
             supabaseURL: url,
             supabaseKey: anonKey,
             options: SupabaseClientOptions(
-                auth: .init(emitLocalSessionAsInitialSession: true)
+                auth: .init(
+                    storage: UserDefaultsLocalStorage(),
+                    emitLocalSessionAsInitialSession: true
+                )
             )
         )
+    }
+}
+
+// MARK: - UserDefaults-based auth storage (avoids Keychain prompts)
+
+private struct UserDefaultsLocalStorage: AuthLocalStorage {
+    private let key = "supabase_session"
+
+    func store(key: String, value: Data) throws {
+        UserDefaults.standard.set(value, forKey: key)
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        UserDefaults.standard.data(forKey: key)
+    }
+
+    func remove(key: String) throws {
+        UserDefaults.standard.removeObject(forKey: key)
     }
 }
