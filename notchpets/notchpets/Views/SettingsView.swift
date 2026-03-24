@@ -6,27 +6,39 @@ struct SettingsView: View {
     let onClose: () -> Void
 
     @State private var editingName: String = ""
+    @State private var editingUserName: String = ""
     @FocusState private var nameFieldFocused: Bool
+    @FocusState private var userNameFieldFocused: Bool
 
     private let labelColor = Color.white.opacity(0.5)
     private let rowFont = Font.system(size: 10, weight: .medium, design: .monospaced)
     private let labelWidth: CGFloat = 75
+    private let rowHeight: CGFloat = 24
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            nameSection
-            speciesPicker
-            backgroundPicker
-            Spacer().frame(height: 2)
-            connectSection
-            #if DEBUG
-            debugSection
-            #endif
+        HStack(alignment: .top, spacing: 10) {
+            // Left column — pet settings
+            VStack(alignment: .leading, spacing: 6) {
+                yourNameSection
+                nameSection
+                speciesPicker
+                backgroundPicker
+            }
+            .frame(width: 260)
+
+            // Right column — partner / connect
+            VStack(alignment: .leading, spacing: 6) {
+                connectSection
+                #if DEBUG
+                debugSection
+                #endif
+            }
+            .frame(width: 260)
         }
-        .frame(width: 300)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             editingName = petStore.myPet?.name ?? ""
+            editingUserName = petStore.userName
         }
     }
 
@@ -39,9 +51,9 @@ struct SettingsView: View {
                 .foregroundColor(labelColor)
                 .frame(width: labelWidth, alignment: .trailing)
 
-            if petStore.partnerPet != nil {
-                HStack(spacing: 6) {
-                    Text("Connected")
+            if let partner = petStore.partnerPet {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(partner.name.isEmpty ? "Connected" : "Connected with \(partner.name)")
                         .font(rowFont)
                         .foregroundColor(.green.opacity(0.8))
 
@@ -90,11 +102,64 @@ struct SettingsView: View {
     }
     #endif
 
-    // MARK: - Name
+    // MARK: - Your name
+
+    private var yourNameSection: some View {
+        HStack(spacing: 8) {
+            Text("Your name")
+                .font(rowFont)
+                .foregroundColor(labelColor)
+                .frame(width: labelWidth, alignment: .trailing)
+
+            HStack(spacing: 4) {
+                TextField("Your name", text: $editingUserName)
+                    .textFieldStyle(.plain)
+                    .font(rowFont)
+                    .foregroundColor(.white)
+                    .focused($userNameFieldFocused)
+                    .onChange(of: editingUserName) {
+                        editingUserName = String(editingUserName.prefix(16))
+                    }
+                    .onSubmit {
+                        commitUserName()
+                    }
+                    .padding(.horizontal, 6)
+                    .frame(height: rowHeight)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+
+                if editingUserName != petStore.userName {
+                    Button(action: commitUserName) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.green)
+                            .frame(width: 20, height: 20)
+                            .background(Color.green.opacity(0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(.easeOut(duration: 0.15), value: editingUserName != petStore.userName)
+        }
+    }
+
+    private func commitUserName() {
+        let trimmed = editingUserName.trimmingCharacters(in: .whitespacesAndNewlines)
+        petStore.userName = trimmed
+        userNameFieldFocused = false
+    }
+
+    // MARK: - Pet name
 
     private var nameSection: some View {
         HStack(spacing: 8) {
-            Text("Name")
+            Text("Pet name")
                 .font(rowFont)
                 .foregroundColor(labelColor)
                 .frame(width: labelWidth, alignment: .trailing)
@@ -112,7 +177,7 @@ struct SettingsView: View {
                         commitName()
                     }
                     .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
+                    .frame(height: rowHeight)
                     .background(Color.white.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .overlay(
@@ -443,7 +508,7 @@ private struct ArrowPicker: View {
 
             ArrowButton(direction: .right, action: onNext)
         }
-        .padding(.vertical, 4)
+        .frame(height: 24)
         .background {
             if let asset = backgroundAsset {
                 Image(asset)

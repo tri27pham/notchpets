@@ -6,8 +6,12 @@ import Supabase
 final class PetStore: ObservableObject {
     @Published var myPet: Pet?
     @Published var partnerPet: Pet?
+    @Published var userName: String {
+        didSet { UserDefaults.standard.set(userName, forKey: userNameKey) }
+    }
 
     private let myPetKey = "notchpets.myPet"
+    private let userNameKey = "notchpets.userName"
     private let decayInterval: TimeInterval = 30 * 60
     private var decayTimer: Timer?
     private var realtimeChannel: RealtimeChannelV2?
@@ -19,6 +23,7 @@ final class PetStore: ObservableObject {
     // MARK: - Init
 
     init() {
+        userName = UserDefaults.standard.string(forKey: "notchpets.userName") ?? ""
         loadLocal()
         startDecayTimer()
     }
@@ -214,8 +219,8 @@ final class PetStore: ObservableObject {
     func mockPartner() {
         partnerPet = Pet(
             name: "Mochi",
-            species: "cat",
-            background: "cafe_background",
+            species: "penguin",
+            background: "japan_background",
             hunger: 72,
             happiness: 85,
             currentMessage: "miss u",
