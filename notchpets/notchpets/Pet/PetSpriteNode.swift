@@ -6,6 +6,7 @@ class PetSpriteNode: SKSpriteNode {
     private let totalRows = 11
     private var framesByState: [AnimationState: [SKTexture]] = [:]
     private var currentState: AnimationState = .idle
+    private var manifest: [AnimationState: AnimationDef] = [:]
 
     init(species: String) {
         // Load as a plain texture — NOT an atlas, which would repack and break UV slicing
@@ -16,7 +17,7 @@ class PetSpriteNode: SKSpriteNode {
         let frameH = 1.0 / CGFloat(totalRows)
 
         // Slice frames for each animation state
-        let manifest = penguinManifest
+        self.manifest = getManifest(for: species)
         for state in AnimationState.allCases {
             guard let def = manifest[state] else { continue }
             var frames: [SKTexture] = []
@@ -46,7 +47,7 @@ class PetSpriteNode: SKSpriteNode {
 
     func setState(_ state: AnimationState, fallback: AnimationState = .idle, onComplete: (() -> Void)? = nil) {
         guard let frames = framesByState[state],
-              let def = penguinManifest[state] else { return }
+              let def = manifest[state] else { return }
 
         currentState = state
         removeAllActions()
