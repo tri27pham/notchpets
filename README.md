@@ -13,7 +13,7 @@
     <a href="https://github.com/tri27pham/notchpets/issues/new?labels=feature&title=">Request Feature</a>
 </p>
 
-<video src="notchpets/docs/readme_demo_vid.mp4" autoplay loop muted playsinline></video>
+![demo](notchpets/docs/readme_demo_vid.gif)
 
 ## Table of Contents
 
