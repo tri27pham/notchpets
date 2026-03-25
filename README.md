@@ -20,7 +20,6 @@
 ## Table of Contents
 
 - [Features](#features)
-- [Installation](#installation)
 - [Usage](#usage)
 - [Pairing](#pairing)
 - [Tech Stack](#tech-stack)
@@ -30,7 +29,7 @@
 
 ## Features
 
-- **6 Pet Species** — Cat, Dog, Frog, Panda, Penguin, Rabbit
+- **6 Pet Species** — Cat, Dog, Frog, Panda, Penguin, Rabbit *(spritesheet assets for Cat, Dog, Frog, and Rabbit are not yet added)*
 - **9 Pixel Art Backgrounds** — Bedroom, Rainy Window, Forest, Mount Fuji, Cafe, Beach, Library, Snowy Field, Japan
 - **Spritesheet Animations** — Idle, happy, eating, playing, sleeping, sad, dancing, running, jumping, catching ball
 - **Ball Throw Mini-Game** — Toss a ball and watch your pet chase, catch, and return it
@@ -129,5 +128,5 @@ notchpets/
 
 ## Debug
 
-In `DEBUG` builds, the settings panel includes a **"Add mock partner"** button to simulate a paired state without needing a second instance or Supabase connection.
+In `DEBUG` builds, the settings panel includes a **"Add mock partner"** button to simulate a paired state without needing a second instance or Supabase connection. This is for development purposes only and will be removed in the final release.
 
