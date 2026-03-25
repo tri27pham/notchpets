@@ -219,7 +219,7 @@ final class PetStore: ObservableObject {
     func mockPartner() {
         partnerPet = Pet(
             name: "Mochi",
-            species: "penguin",
+            species: "panda",
             background: "japan_background",
             hunger: 72,
             happiness: 85,

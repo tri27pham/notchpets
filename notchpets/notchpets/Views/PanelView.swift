@@ -120,6 +120,13 @@ struct PanelView: View {
                     partnerSceneHolder.scene.updateBackground(newBackground)
                 }
             }
+            .onChange(of: petStore.partnerPet?.currentTrackName) { _, newTrack in
+                if newTrack != nil {
+                    partnerSceneHolder.scene.startListening()
+                } else {
+                    partnerSceneHolder.scene.stopListening()
+                }
+            }
             .onChange(of: petStore.partnerPet?.id) { oldId, newId in
                 // Pairing status changed — cancel animations and reset positioning
                 let wasPaired = oldId != nil
@@ -127,6 +134,13 @@ struct PanelView: View {
                 guard wasPaired != nowPaired else { return }
                 mySceneHolder.scene.resetToIdle()
                 partnerSceneHolder.scene.resetToIdle()
+
+                // Re-apply listening state after reset if partner has a track playing
+                if nowPaired, petStore.partnerPet?.currentTrackName != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        partnerSceneHolder.scene.startListening()
+                    }
+                }
             }
             .onChange(of: showSettings) { _, isShowing in
                 state.needsKeyFocus = isShowing
