@@ -13,7 +13,9 @@
     <a href="https://github.com/tri27pham/notchpets/issues/new?labels=feature&title=">Request Feature</a>
 </p>
 
-![demo](notchpets/docs/readme_demo_vid.gif)
+<p align="center">
+    <img src="notchpets/docs/readme_demo_vid.gif" alt="demo">
+</p>
 
 ## Table of Contents
 
