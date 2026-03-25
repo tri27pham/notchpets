@@ -1,2 +1,12 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+
+# macOS
 .DS_Store
-node_modules/
+
+# Secrets
+Config.plist

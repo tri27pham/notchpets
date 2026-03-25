@@ -1,5 +1,5 @@
 # notchpets — Product Requirements Document
-**v2.0 — March 2026**
+**v2.1 — March 2026**
 
 ---
 
@@ -56,12 +56,12 @@ notchpets is designed for exactly two users linked as a pair. There is no solo m
 | | |
 |---|---|
 | **App framework** | SwiftUI + AppKit (NSPanel for the notch window) |
-| **Pet rendering** | SpriteKit via `SpriteView` — pixel art spritesheet animation |
+| **Pet rendering** | SwiftUI `Image` — static pixel art image per species (v1). SpriteKit spritesheet animation added in v2. |
 | **Backend** | Supabase (Postgres + Auth + Realtime + Storage + Edge Functions) |
 | **Supabase client** | supabase-swift SDK — Auth, PostgREST, Realtime channels |
 | **Real-time sync** | Supabase Realtime — WebSocket channels keyed on pair ID |
 | **Now-playing detection** | macOS MediaRemote private framework via `@_silgen_name` — integrated directly, no helper binary |
-| **Asset pipeline** | Pixel art spritesheets sourced from itch.io (CC0 / licensed packs) |
+| **Asset pipeline** | Static pixel art images per species (v1). Spritesheets for animation added in v2. |
 | **Session storage** | macOS Keychain via Security framework |
 | **Auto-updates** | Sparkle framework |
 | **Distribution** | Direct download .dmg, signed with Developer ID |
@@ -109,15 +109,38 @@ Each user owns one pet. Both pets are visible in the shared panel — your pet o
 - Penguin
 - Rabbit
 
-Each species has a full pixel art spritesheet with the following animation states:
+**v1 — Static image per species**
 
-- **idle** — breathing loop, ~2s cycle
-- **happy** — bouncing, triggered by interaction
-- **eating** — nom animation, triggered by feed
-- **playing** — running / spinning, triggered by play
-- **sleeping** — zZz loop, triggered when happiness < 20
-- **sad** — drooping loop, triggered when hunger < 20
-- **dancing** — short dance loop, triggered when track changes
+Each species has a single static pixel art image displayed in the panel. No animation in v1.
+
+**v2 — Full spritesheet animation (deferred)**
+
+Each species will have a full pixel art spritesheet with the following animation states:
+
+- **idle** — breathing loop, ~2s cycle. Default state when no interaction is happening.
+- **happy** — bouncing, triggered by tapping/clicking the pet or when a partner message arrives.
+- **eating** — nom animation, triggered by the feed button. Grants +30 hunger.
+- **playing** — running / spinning, triggered by double-tapping the pet or the play button. Grants +25 happiness.
+- **sleeping** — zZz loop, auto-triggered when idle for 5+ minutes or happiness < 20. Tap pet to wake.
+- **sad** — drooping loop, auto-triggered when hunger < 20. Feed to recover.
+- **dancing** — short dance loop, triggered when a new track starts playing (MediaRemote).
+- **run** — legs cycling, used while pet moves horizontally across the panel during ball-catch.
+- **jump** — rise → peak → fall arc, used during ball catch approach.
+- **catch** — reach/grab/land sequence, plays once on successful catch then returns to idle.
+
+#### Interaction triggers
+
+| Action | Animation | Effect |
+|---|---|---|
+| **Tap pet** | happy | Pet bounces — no stat change |
+| **Double-tap pet** | playing | Pet spins — +25 happiness (capped at 100) |
+| **Feed button** | eating | Pet eats — +30 hunger (capped at 100) |
+| **Idle 5+ minutes** | sleeping | Pet falls asleep — tap to wake |
+| **Hunger < 20** | sad | Pet droops — feed to recover |
+| **Happiness < 20** | sleeping | Pet sleeps — play or tap to recover |
+| **Track changes** | dancing | Pet dances when new music detected via MediaRemote |
+| **Throw ball** | run → jump → catch | Pet chases ball across panel — +10 happiness |
+| **Partner sends message** | happy | Pet bounces when a message arrives |
 
 #### Pet stats
 
@@ -147,7 +170,20 @@ Each user independently selects a pixel art background scene for their pet. The 
 
 Backgrounds are static pixel art scenes at 200×160px. No parallax or animation in v1. User selects via a scene picker in the settings panel.
 
-### 6.5 Messages
+### 6.5 Ball-catching mini-game *(v2 — deferred)*
+
+Either user can throw a ball to either pet. The pet runs across the panel to catch it, jumps, grabs the ball, lands, then returns to idle. Requires spritesheet animations — deferred to v2.
+
+| | |
+|---|---|
+| **Trigger** | User taps a throw button in the interaction controls |
+| **Sequence** | idle → run (looping while moving) → jump → catch → idle |
+| **Pet movement** | SpriteKit `SKAction.moveBy` moves the sprite's x position while the run frames cycle |
+| **Ball sprite** | Separate sprite with a short spin animation, travels from one side to the other |
+| **Sync** | Throw action written to Supabase, broadcast via Realtime — both screens see the animation |
+| **Happiness effect** | Successful catch grants +10 happiness |
+
+### 6.6 Messages
 
 Either user can send a message that appears as a pixel art speech bubble above their own pet. Only one message exists at a time per user — sending a new message replaces the previous one. Messages are free text, capped at 48 characters to fit the bubble.
 
@@ -160,7 +196,7 @@ Either user can send a message that appears as a pixel art speech bubble above t
 | **Fade** | Bubble fades out after 60 seconds if no new message is sent |
 | **Font** | Pixel bitmap font (e.g. Press Start 2P or similar CC0 font) |
 
-### 6.6 Now playing
+### 6.7 Now playing
 
 The app automatically detects whatever is currently playing on each user's machine using the macOS MediaRemote private framework — the same system used by Boring Notch, NowPlaying CLI, and the macOS lock screen media controls. No account connection or OAuth required. Works with Spotify, Apple Music, YouTube, or any app that registers with the system audio session.
 
@@ -176,7 +212,7 @@ MediaRemote is integrated directly into the Swift app via `@_silgen_name` functi
 | **Display** | Small pixel art bubble above the pet: music note icon + track name + artist (truncated to 24 chars) |
 | **Sync** | Track info written to pets table on change, broadcast via Realtime to partner's screen |
 | **No playback** | Bubble hidden when nothing is playing or machine is paused |
-| **Pet reaction** | Pet does a small dance frame when track changes (single cycle, returns to idle) |
+| **Pet reaction** | Pet does a small dance animation when track changes (v2 — requires spritesheet). |
 | **App Store** | Not compatible — private API. Irrelevant for v1 direct .dmg distribution. |
 
 ---
@@ -289,12 +325,14 @@ Accessible via a gear icon in the expanded notch panel. Settings are personal �
 
 Recommended implementation sequence for a vibe-coded build with heavy Claude Code usage:
 
-- **Day 1** — Swift/SwiftUI app shell. NSPanel notch window with true notch surround. `NSScreen` APIs for exact notch dimensions. Hover expand/collapse via `NSTrackingArea`. Static pixel art panel renders correctly.
-- **Day 2** — Supabase schema, supabase-swift Auth magic link, invite/pairing flow, Keychain session storage.
-- **Day 3** — SpriteKit pet rendering, spritesheet animation state machine, background scenes, Realtime subscriptions wired up.
-- **Day 4** — Feed/play interactions, message bubbles, speech bubble UI, free text input.
-- **Day 5** — MediaRemote now-playing integration (native Swift, no helper binary), music bubble UI, Realtime sync of track data, pet dance reaction on track change.
-- **Buffer** — Pet decay cron, local notifications via `UNUserNotificationCenter`, Sparkle auto-updates, polish, .dmg packaging.
+- **Stage 1** — Swift/SwiftUI app shell. NSPanel notch window. Hover expand/collapse. Static panel renders correctly. ✓
+- **Stage 2** — Pet data model (UserDefaults). Static pet image + background in panel. ✓
+- **Stage 3** — SpriteKit animations for one species (penguin). Animation state machine proven.
+- **Stage 4** — All 6 species animated. All 8 backgrounds added. Setup wizard for species/name/background selection.
+- **Stage 5** — Local messaging. Speech bubble appears above own pet on own screen only.
+- **Stage 6** — Spotify / now-playing detection via MediaRemote. Music bubble on own screen only.
+- **Stage 7** — Supabase backend, auth, pairing. All local state (pets, messages, now-playing) wired to real-time sync.
+- **Stage 8** — Local notifications, settings panel, .dmg packaging, Sparkle auto-updates.
 
 ---
 
